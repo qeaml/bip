@@ -21,4 +21,5 @@ bip also uses TOML for it's recipes because YAML.
 To see a bip in action, you can check out the [`simple`][simplesample] sample
 project.
 
-qcbs: https://github.com/qeaml/bs
+[qcbs]: https://github.com/qeaml/bs
+[simplesample]: sample/simple
