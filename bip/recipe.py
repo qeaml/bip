@@ -9,6 +9,8 @@ import bip.common as common
 @dataclass
 class Recipe:
   bld: build.Info
+  c_info: compiler.CInfo
+  cpp_info: compiler.CPPInfo
   log: common.Log
   components: list[component.Component]
 
@@ -31,6 +33,9 @@ class Recipe:
     src = root.joinpath(build_data.get("src", ""))
     out = root.joinpath(build_data.get("out", ""))
     obj = root.joinpath(build_data.get("obj", ""))
+
+    c_info = compiler.CInfo.from_dict(build_data.get("c", {}))
+    cpp_info = compiler.CPPInfo.from_dict(build_data.get("cpp", {}))
 
     bld = build.Info(
       root, src, out, obj,
@@ -57,11 +62,14 @@ class Recipe:
       incl_dirs = [Path(i) for i in cdata.get("incl", [])]
       link_args = cdata.get("link", [])
 
+      c_info = compiler.CInfo.from_dict(cdata.get("c", {}))
+      cpp_info = compiler.CPPInfo.from_dict(cdata.get("cpp", {}))
+
       components.append(component.Component(
-        cname, libs, incl_dirs, link_args, csrc, is_exe, cout,
+        cname, libs, incl_dirs, link_args, c_info, cpp_info, csrc, is_exe, cout,
       ))
 
-    return Recipe(bld, log, components)
+    return Recipe(bld, c_info, cpp_info, log, components)
 
   def build(self) -> bool:
     self.bld.out_dir.mkdir(parents=True, exist_ok=True)

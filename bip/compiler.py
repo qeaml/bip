@@ -4,13 +4,28 @@ from pathlib import Path
 import bip.common as common
 import subprocess
 
+C_EXTS = ["c"]
+CPP_EXTS = ["cpp", "cxx", "cc"]
+
 @dataclass
 class CPPInfo:
   std: str
 
+  @classmethod
+  def from_dict(cls, data: dict[str, str]) -> "CPPInfo":
+    std = data.get("std", "c++17")
+
+    return cls(std)
+
 @dataclass
 class CInfo:
   std: str
+
+  @classmethod
+  def from_dict(cls, data: dict[str, str]) -> "CInfo":
+    std = data.get("std", "c11")
+
+    return cls(std)
 
 @dataclass
 class Info:
@@ -18,6 +33,9 @@ class Info:
   libs: list[str]
   link: list[str]
   log: common.Log
+
+  c = CInfo("c11")
+  cpp = CPPInfo("c++17")
 
 class Compiler(ABC):
   @property
@@ -49,8 +67,15 @@ class GNULike(Compiler):
 
   def compile_obj(self, inf: Info, src: Path, out: Path) -> bool:
     flags = ["-c", "-flto", f"{src}", "-o", f"{out}"]
+
+    if src.suffix.removeprefix(".") in C_EXTS:
+      flags.extend(["-xc", f"--std={inf.c.std}"])
+    if src.suffix.removeprefix(".") in CPP_EXTS:
+      flags.extend(["-xc++", f"--std={inf.cpp.std}"])
+
     for i in inf.incl:
       flags.append(f"-I{i}")
+
     cmd = self._cmd + " " + " ".join(flags)
     inf.log.verbose(cmd)
     return subprocess.run(cmd).returncode == 0
@@ -91,9 +116,16 @@ class MSVC(Compiler):
 
   def compile_obj(self, inf: Info, src: Path, out: Path) -> bool:
     flags = ["/c", f"/Fo{out}"]
+
+    if src.suffix.removeprefix(".") in C_EXTS:
+      flags.extend(["/TC", f"/std:{inf.c.std}"])
+    if src.suffix.removeprefix(".") in CPP_EXTS:
+      flags.extend(["/TP", f"/std:{inf.cpp.std}"])
+
     for i in inf.incl:
       flags.append(f"/I{i}")
     flags.append(str(src))
+
     cmd = MSVC._CMD_BASE + " ".join(flags)
     inf.log.verbose(cmd)
     return subprocess.run(cmd).returncode == 0

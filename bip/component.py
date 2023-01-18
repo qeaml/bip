@@ -24,6 +24,7 @@ class Component:
 
   def __init__(self,
     name: str, libs: list[str], incl_dirs: list[Path], link_args: list[str],
+    c_info: compiler.CInfo, cpp_info: compiler.CPPInfo,
     src_dir: str, is_exe: bool, out_fn: str,
   ):
     self.name = name
