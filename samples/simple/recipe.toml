@@ -1,0 +1,14 @@
+[build]
+src = "source"
+out = "target"
+obj = "target/build"
+cc = "msvc"
+
+[hello]
+lib = "hello"
+
+[main]
+exe = "main"
+libs = [
+  "hello"
+]

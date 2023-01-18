@@ -1,0 +1,28 @@
+# sample recipe for a game project using SDL2 and Dear ImGui
+[build]
+src = "source"
+out = "target"
+obj = "target/build"
+incl = [ "include", "lib_include" ]
+cc = "msvc"
+
+# build source/imgui/** to target/imgui.dll
+[imgui]
+lib = "imgui"
+
+# build source/client/** to target/client.dll linking agaist SDL2
+[client]
+lib = "client"
+libs = [
+  "SDL2",
+  "SDL2_main",
+  "SDL2_image",
+  "SDL2_mixer",
+  "Shell32"
+]
+
+# build source/launcher/** to target/hl3.exe linking against client and imgui
+[launcher]
+src = "launcher"
+exe = "hl3"
+libs = [ "client", "imgui" ]
