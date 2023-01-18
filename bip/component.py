@@ -83,8 +83,10 @@ class Component:
 
   def build(self, bld: build.Info, c_info: compiler.CInfo, cpp_info: compiler.CPPInfo, log: common.Log) -> bool:
     objs = self._built
+    incl = self.incl_dirs
+    incl.extend(bld.incl_dirs)
     obj_info = compiler.Info(
-      self.incl_dirs, [],
+      incl, [],
       self.link_args, log,
       c_info.merge(self.c_info),
       cpp_info.merge(self.cpp_info))

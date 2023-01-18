@@ -11,6 +11,7 @@ class Info:
   src_dir: Path
   out_dir: Path
   obj_dir: Path
+  incl_dirs: list[Path]
   cc: compiler.Compiler
   log: common.Log
 

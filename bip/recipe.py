@@ -33,12 +33,13 @@ class Recipe:
     src = root.joinpath(build_data.get("src", ""))
     out = root.joinpath(build_data.get("out", ""))
     obj = root.joinpath(build_data.get("obj", ""))
+    incl = [root.joinpath(i) for i in build_data.get("incl", [])]
 
     c_info = compiler.CInfo.from_dict(build_data.get("c", {}))
     cpp_info = compiler.CPPInfo.from_dict(build_data.get("cpp", {}))
 
     bld = build.Info(
-      root, src, out, obj,
+      root, src, out, obj, incl,
       compiler.COMPILERS[cc], log
     )
 
