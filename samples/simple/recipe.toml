@@ -5,7 +5,7 @@ obj = "target/build"
 cc = "msvc"
 
 [build.c]
-std = "c17"
+std = "c11"
 
 [build.cpp]
 std = "c++20"
@@ -21,3 +21,6 @@ libs = [
 link = [
   "/SUBSYSTEM:CONSOLE"
 ]
+
+[main.c]
+std = "c17"

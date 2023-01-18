@@ -13,9 +13,12 @@ class CPPInfo:
 
   @classmethod
   def from_dict(cls, data: dict[str, str]) -> "CPPInfo":
-    std = data.get("std", "c++17")
-
+    std = data.get("std", "")
     return cls(std)
+
+  def merge(self, other: "CPPInfo") -> "CPPInfo":
+    std = other.std if other.std != "" else self.std if self.std != "" else "c11"
+    return CPPInfo(std)
 
 @dataclass
 class CInfo:
@@ -23,9 +26,12 @@ class CInfo:
 
   @classmethod
   def from_dict(cls, data: dict[str, str]) -> "CInfo":
-    std = data.get("std", "c11")
-
+    std = data.get("std", "")
     return cls(std)
+
+  def merge(self, other: "CInfo") -> "CInfo":
+    std = other.std if other.std != "" else self.std if self.std != "" else "c++11"
+    return CInfo(std)
 
 @dataclass
 class Info:
@@ -34,8 +40,8 @@ class Info:
   link: list[str]
   log: common.Log
 
-  c = CInfo("c11")
-  cpp = CPPInfo("c++17")
+  c: CInfo
+  cpp: CPPInfo
 
 class Compiler(ABC):
   @property

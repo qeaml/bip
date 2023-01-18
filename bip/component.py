@@ -11,6 +11,8 @@ class Component:
   libs: list[str]
   incl_dirs: list[Path]
   link_args: list[str]
+  c_info: compiler.CInfo
+  cpp_info: compiler.CPPInfo
   src_dir: str
   is_exe: bool
   out_fn: str
@@ -31,6 +33,8 @@ class Component:
     self.libs = libs
     self.incl_dirs = incl_dirs
     self.link_args = link_args
+    self.c_info = c_info
+    self.cpp_info = cpp_info
     self.src_dir = src_dir
     self.is_exe = is_exe
     self.out_fn = out_fn
@@ -77,9 +81,13 @@ class Component:
       return True
     return len(self._rebuild) > 0
 
-  def build(self, bld: build.Info, log: common.Log) -> bool:
+  def build(self, bld: build.Info, c_info: compiler.CInfo, cpp_info: compiler.CPPInfo, log: common.Log) -> bool:
     objs = self._built
-    obj_info = compiler.Info(self.incl_dirs, [], self.link_args, log)
+    obj_info = compiler.Info(
+      self.incl_dirs, [],
+      self.link_args, log,
+      c_info.merge(self.c_info),
+      cpp_info.merge(self.cpp_info))
     for src_file, obj_file in self._rebuild:
       log.verbose(f"Building object {obj_file} from {src_file}")
       if not bld.cc.compile_obj(obj_info, src_file, obj_file):
@@ -91,7 +99,11 @@ class Component:
       final_file = bld.exe_file(self.out_fn)
     else:
       final_file = bld.lib_file(self.out_fn)
-    final_info = compiler.Info([], self.libs, self.link_args, log)
+    final_info = compiler.Info(
+      [], self.libs,
+      self.link_args, log,
+      c_info.merge(self.c_info),
+      cpp_info.merge(self.cpp_info))
     log.verbose(f"Building executable {final_file} from:")
     for o in objs:
       log.verbose(f"  - {o}")

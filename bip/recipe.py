@@ -62,11 +62,11 @@ class Recipe:
       incl_dirs = [Path(i) for i in cdata.get("incl", [])]
       link_args = cdata.get("link", [])
 
-      c_info = compiler.CInfo.from_dict(cdata.get("c", {}))
-      cpp_info = compiler.CPPInfo.from_dict(cdata.get("cpp", {}))
+      cc_info = compiler.CInfo.from_dict(cdata.get("c", {}))
+      ccpp_info = compiler.CPPInfo.from_dict(cdata.get("cpp", {}))
 
       components.append(component.Component(
-        cname, libs, incl_dirs, link_args, c_info, cpp_info, csrc, is_exe, cout,
+        cname, libs, incl_dirs, link_args, cc_info, ccpp_info, csrc, is_exe, cout,
       ))
 
     return Recipe(bld, c_info, cpp_info, log, components)
@@ -77,7 +77,7 @@ class Recipe:
     for c in self.components:
       if not c.should_build(self.bld, self.log):
         continue
-      if not c.build(self.bld, self.log):
+      if not c.build(self.bld, self.c_info, self.cpp_info, self.log):
         self.log.err("Build failed. Aborting")
         return False
     return True

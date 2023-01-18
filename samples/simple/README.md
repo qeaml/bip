@@ -29,6 +29,13 @@ component:
 And then the `main` component:
 * `exe` - defines this component as an executable. Alike `lib` this contains
           the executable's name and may differ from the component name.
-* `libs` - the static librariess to link this component against. Although in
+* `libs` - the static libraries to link this component against. Although in
            this example we only provide this for the executable, you can
            provide this list for shared library components to link against them.
+* `link` - flags to be passed to the linker.
+
+The `build` section may also have a `c` or `cpp` subsection, which defines
+settings specific for either language. Compoments may also have such a
+subsection.
+* `std` - define the C/C++ standard to use. Defaults to `c11` for C and `c++17`
+          for C++.
