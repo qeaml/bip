@@ -92,6 +92,7 @@ class Component:
       cpp_info.merge(self.cpp_info))
     for src_file, obj_file in self._rebuild:
       log.verbose(f"Building object {obj_file} from {src_file}")
+      obj_file.parent.mkdir(exist_ok=True, parents=True)
       if not bld.cc.compile_obj(obj_info, src_file, obj_file):
         return False
       objs.append(obj_file)
@@ -101,6 +102,7 @@ class Component:
       final_file = bld.exe_file(self.out_fn)
     else:
       final_file = bld.lib_file(self.out_fn)
+    final_file.parent.mkdir(exist_ok=True, parents=True)
     final_info = compiler.Info(
       [], self.libs,
       self.link_args, log,
