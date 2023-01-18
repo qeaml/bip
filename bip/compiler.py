@@ -1,8 +1,23 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-import common
+import bip.common as common
 import subprocess
+
+@dataclass
+class CPPInfo:
+  std: str
+
+@dataclass
+class CInfo:
+  std: str
+
+@dataclass
+class Info:
+  incl: list[Path]
+  libs: list[str]
+  link: list[str]
+  log: common.Log
 
 class Compiler(ABC):
   @property
@@ -11,15 +26,15 @@ class Compiler(ABC):
     pass
 
   @abstractmethod
-  def compile_obj(self, log: common.Log, incl: list[Path], src: Path, out: Path) -> bool:
+  def compile_obj(self, inf: Info, src: Path, out: Path) -> bool:
     pass
 
   @abstractmethod
-  def build_exe(self, log: common.Log, objs: list[Path], libs: list[str], out: Path) -> bool:
+  def build_exe(self, inf: Info, objs: list[Path], out: Path) -> bool:
     pass
 
   @abstractmethod
-  def build_lib(self, log: common.Log, objs: list[Path], libs: list[str], out: Path) -> bool:
+  def build_lib(self, inf: Info, objs: list[Path], out: Path) -> bool:
     pass
 
 class GNULike(Compiler):
@@ -32,34 +47,38 @@ class GNULike(Compiler):
   def obj_ext(self) -> str:
     return "o"
 
-  def compile_obj(self, log: common.Log, incl: list[Path], src: Path, out: Path) -> bool:
+  def compile_obj(self, inf: Info, src: Path, out: Path) -> bool:
     flags = ["-c", "-flto", f"{src}", "-o", f"{out}"]
-    for i in incl:
+    for i in inf.incl:
       flags.append(f"-I{i}")
     cmd = self._cmd + " " + " ".join(flags)
-    log.verbose(cmd)
+    inf.log.verbose(cmd)
     return subprocess.run(cmd).returncode == 0
     # return True
 
-  def build_exe(self, log: common.Log, objs: list[Path], libs: list[str], out: Path) -> bool:
-    flags = ["-flto", "-o", f"{out}"]
+  def build_exe(self, inf: Info, objs: list[Path], out: Path) -> bool:
+    flags = ["-flto", f"-L{out.parent}", "-o", f"{out}"]
+    if len(inf.link) > 0:
+      flags.append("-Wl," + ",".join(inf.link))
     for o in objs:
       flags.append(f"{o}")
-    for l in libs:
+    for l in inf.libs:
       flags.append(f"-l{l}")
     cmd = self._cmd + " " + " ".join(flags)
-    log.verbose(cmd)
+    inf.log.verbose(cmd)
     return subprocess.run(cmd).returncode == 0
     # return True
 
-  def build_lib(self, log: common.Log, objs: list[Path], libs: list[str], out: Path) -> bool:
-    flags = ["-fPIC", "-flto", "-shared", "-o", f"{out}"]
+  def build_lib(self, inf: Info, objs: list[Path], out: Path) -> bool:
+    flags = ["-fPIC", "-flto", "-shared", f"-L{out.parent}", "-o", f"{out}"]
+    if len(inf.link) > 0:
+      flags.append("-Wl," + ",".join(inf.link))
     for o in objs:
       flags.append(f"{o}")
-    for l in libs:
+    for l in inf.libs:
       flags.append(f"-l{l}")
     cmd = self._cmd + " " + " ".join(flags)
-    log.verbose(cmd)
+    inf.log.verbose(cmd)
     return subprocess.run(cmd).returncode == 0
     # return True
 
@@ -70,35 +89,37 @@ class MSVC(Compiler):
   def obj_ext(self) -> str:
     return "obj"
 
-  def compile_obj(self, log: common.Log, incl: list[Path], src: Path, out: Path) -> bool:
+  def compile_obj(self, inf: Info, src: Path, out: Path) -> bool:
     flags = ["/c", f"/Fo{out}"]
-    for i in incl:
+    for i in inf.incl:
       flags.append(f"/I{i}")
     flags.append(str(src))
     cmd = MSVC._CMD_BASE + " ".join(flags)
-    log.verbose(cmd)
+    inf.log.verbose(cmd)
     return subprocess.run(cmd).returncode == 0
 
-  def build_exe(self, log: common.Log, objs: list[Path], libs: list[str], out: Path) -> bool:
+  def build_exe(self, inf: Info, objs: list[Path], out: Path) -> bool:
     flags = [f"/Fe{out}"]
     for o in objs:
       flags.append(str(o))
-    for l in libs:
+    for l in inf.libs:
       flags.append(f"{l}.lib")
     flags.append(f"/link /LIBPATH:{out.parent}")
+    flags.extend(inf.link)
     cmd = MSVC._CMD_BASE + " ".join(flags)
-    log.verbose(cmd)
+    inf.log.verbose(cmd)
     return subprocess.run(cmd).returncode == 0
 
-  def build_lib(self, log: common.Log, objs: list[Path], libs: list[str], out: Path) -> bool:
+  def build_lib(self, inf: Info, objs: list[Path], out: Path) -> bool:
     flags = ["/LD", f"/Fe{out}"]
     for o in objs:
       flags.append(str(o))
-    for l in libs:
+    for l in inf.libs:
       flags.append(f"{l}.lib")
     flags.append(f"/link /LIBPATH:{out.parent}")
+    flags.extend(inf.link)
     cmd = MSVC._CMD_BASE + " ".join(flags)
-    log.verbose(cmd)
+    inf.log.verbose(cmd)
     return subprocess.run(cmd).returncode == 0
 
 COMPILERS = {

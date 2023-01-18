@@ -12,3 +12,6 @@ exe = "main"
 libs = [
   "hello"
 ]
+link = [
+  "/SUBSYSTEM:CONSOLE"
+]

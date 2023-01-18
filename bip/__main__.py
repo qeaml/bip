@@ -1,6 +1,7 @@
 from sys import argv
 from pathlib import Path
-from cli import *
+from .cli import *
+import bip.common as common
 
 def main() -> int:
   action = "build"

@@ -1,8 +1,8 @@
 from pathlib import Path
 from typing import Tuple
-import build
-import compiler
-import common
+import bip.build as build
+import bip.compiler as compiler
+import bip.common as common
 
 class Component:
   _SRC_EXTS = ["c", "cpp"]
@@ -10,6 +10,7 @@ class Component:
   name: str
   libs: list[str]
   incl_dirs: list[Path]
+  link_args: list[str]
   src_dir: str
   is_exe: bool
   out_fn: str
@@ -22,12 +23,13 @@ class Component:
   _built: list[Path]
 
   def __init__(self,
-    name: str, libs: list[str], incl_dirs: list[Path],
+    name: str, libs: list[str], incl_dirs: list[Path], link_args: list[str],
     src_dir: str, is_exe: bool, out_fn: str,
   ):
     self.name = name
     self.libs = libs
     self.incl_dirs = incl_dirs
+    self.link_args = link_args
     self.src_dir = src_dir
     self.is_exe = is_exe
     self.out_fn = out_fn
@@ -76,21 +78,23 @@ class Component:
 
   def build(self, bld: build.Info, log: common.Log) -> bool:
     objs = self._built
+    obj_info = compiler.Info(self.incl_dirs, [], self.link_args, log)
     for src_file, obj_file in self._rebuild:
       log.verbose(f"Building object {obj_file} from {src_file}")
-      if not bld.cc.compile_obj(log, self.incl_dirs, src_file, obj_file):
+      if not bld.cc.compile_obj(obj_info, src_file, obj_file):
         return False
       objs.append(obj_file)
 
+    final_file: Path
     if self.is_exe:
-      exe_file = bld.exe_file(self.out_fn)
-      log.verbose(f"Building executable {exe_file} from:")
-      for o in objs:
-        log.verbose(f"  - {o}")
-      return bld.cc.build_exe(log, objs, self.libs, exe_file)
+      final_file = bld.exe_file(self.out_fn)
     else:
-      lib_file = bld.lib_file(self.out_fn)
-      log.verbose(f"Building library {lib_file} from:")
-      for o in objs:
-        log.verbose(f"  - {o}")
-      return bld.cc.build_lib(log, objs, self.libs, lib_file)
+      final_file = bld.lib_file(self.out_fn)
+    final_info = compiler.Info([], self.libs, self.link_args, log)
+    log.verbose(f"Building executable {final_file} from:")
+    for o in objs:
+      log.verbose(f"  - {o}")
+    if self.is_exe:
+      return bld.cc.build_exe(final_info, objs, final_file)
+    else:
+      return bld.cc.build_lib(final_info, objs, final_file)

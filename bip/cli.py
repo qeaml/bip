@@ -1,7 +1,7 @@
 from pathlib import Path
-from recipe import Recipe
+from .recipe import Recipe
 import tomllib
-import common
+import bip.common as common
 
 def build(root: Path, log: common.Log) -> int:
   recipe_file = root.joinpath("recipe.toml")

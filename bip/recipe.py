@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from typing import Any, Optional
 from pathlib import Path
-import build
-import component
-import compiler
-import common
+import bip.build as build
+import bip.component as component
+import bip.compiler as compiler
+import bip.common as common
 
 @dataclass
 class Recipe:
@@ -55,9 +55,10 @@ class Recipe:
       cout = cdata["exe"] if is_exe else cdata["lib"]
       libs = cdata.get("libs", [])
       incl_dirs = [Path(i) for i in cdata.get("incl", [])]
+      link_args = cdata.get("link", [])
 
       components.append(component.Component(
-        cname, libs, incl_dirs, csrc, is_exe, cout,
+        cname, libs, incl_dirs, link_args, csrc, is_exe, cout,
       ))
 
     return Recipe(bld, log, components)

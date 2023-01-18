@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from pathlib import Path
 from datetime import datetime
-import compiler
-import common
+import bip.compiler as compiler
+import bip.common as common
 import sys
 
 @dataclass
