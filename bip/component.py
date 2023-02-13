@@ -42,9 +42,7 @@ class Component:
     self._rebuild = []
     self._built = []
 
-  def should_build(self, bld: build.Info, log: common.Log) -> bool:
-    log.verbose(f"Checking if {self.name} should be rebuilt...")
-
+  def _gather_objects(self, bld: build.Info, log: common.Log) -> bool:
     self._rebuild = []
     self._built = []
 
@@ -69,6 +67,14 @@ class Component:
       else:
         self._built.append(obj_file)
 
+    return True
+
+  def should_build(self, bld: build.Info, log: common.Log) -> bool:
+    log.verbose(f"Checking if {self.name} should be rebuilt...")
+
+    if not self._gather_objects(bld, log):
+      return False
+
     final_file: Path
     if self.is_exe:
       final_file = bld.exe_file(self.out_fn)
@@ -80,6 +86,17 @@ class Component:
       log.verbose("Output file does not exist")
       return True
     return len(self._rebuild) > 0
+
+  def clean(self, bld: build.Info, log: common.Log) -> bool:
+    if not self._gather_objects(bld, log):
+      return False
+    for f in self._built:
+      log.verbose(f"Removing: {f}")
+      f.unlink(missing_ok=True)
+    for _, f in self._rebuild:
+      log.verbose(f"Removing: {f}")
+      f.unlink(missing_ok=True)
+    return True
 
   def build(self, bld: build.Info, c_info: compiler.CInfo, cpp_info: compiler.CPPInfo, log: common.Log) -> bool:
     objs = self._built

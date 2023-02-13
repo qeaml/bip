@@ -49,6 +49,16 @@ class Compiler(ABC):
   def obj_ext(self) -> str:
     pass
 
+  @property
+  @abstractmethod
+  def optimized(self) -> bool:
+    pass
+
+  @optimized.setter
+  @abstractmethod
+  def optimized(self, opt: bool) -> None:
+    pass
+
   @abstractmethod
   def compile_obj(self, inf: Info, src: Path, out: Path) -> bool:
     pass
@@ -63,6 +73,7 @@ class Compiler(ABC):
 
 class GNULike(Compiler):
   _cmd: str
+  _opt: bool = False
 
   def __init__(self, cmd: str):
     self._cmd = cmd
@@ -71,8 +82,20 @@ class GNULike(Compiler):
   def obj_ext(self) -> str:
     return "o"
 
+  @property
+  def optimized(self) -> bool:
+    return self._opt
+
+  @optimized.setter
+  def optimized(self, opt: bool) -> None:
+    self._opt = opt
+
   def compile_obj(self, inf: Info, src: Path, out: Path) -> bool:
-    flags = ["-c", "-flto", f"{src}", "-o", f"{out}"]
+    flags = ["-D_BIPBUILD_", "-c", "-o", f"{out}"]
+    if self.optimized:
+      flags.extend(["-DNDEBUG", "-flto", "-O3"])
+    else:
+      flags.extend(["-DDEBUG", "-O0", "-g", "-Wall", "-Wpedantic", "-Wextra"])
 
     if src.suffix.removeprefix(".") in C_EXTS:
       flags.extend(["-xc", f"--std={inf.c.std}"])
@@ -82,13 +105,18 @@ class GNULike(Compiler):
     for i in inf.incl:
       flags.append(f"-I{i}")
 
+    flags.append(f"{src}")
+
     cmd = self._cmd + " " + " ".join(flags)
     inf.log.verbose(cmd)
     return subprocess.run(cmd).returncode == 0
     # return True
 
   def build_exe(self, inf: Info, objs: list[Path], out: Path) -> bool:
-    flags = ["-flto", f"-L{out.parent}", "-o", f"{out}"]
+    flags = [f"-L{out.parent}", "-o", f"{out}"]
+    if self.optimized:
+      flags.extend(["-flto"])
+
     if len(inf.link) > 0:
       flags.append("-Wl," + ",".join(inf.link))
     for o in objs:
@@ -101,7 +129,10 @@ class GNULike(Compiler):
     # return True
 
   def build_lib(self, inf: Info, objs: list[Path], out: Path) -> bool:
-    flags = ["-fPIC", "-flto", "-shared", f"-L{out.parent}", "-o", f"{out}"]
+    flags = ["-fPIC", "-shared", f"-L{out.parent}", "-o", f"{out}"]
+    if self.optimized:
+      flags.extend(["-flto"])
+
     if len(inf.link) > 0:
       flags.append("-Wl," + ",".join(inf.link))
     for o in objs:
@@ -115,13 +146,26 @@ class GNULike(Compiler):
 
 class MSVC(Compiler):
   _CMD_BASE = "CL /nologo "
+  _opt: bool = False
 
   @property
   def obj_ext(self) -> str:
     return "obj"
 
+  @property
+  def optimized(self) -> bool:
+    return self._opt
+
+  @optimized.setter
+  def optimized(self, opt: bool) -> None:
+    self._opt = opt
+
   def compile_obj(self, inf: Info, src: Path, out: Path) -> bool:
-    flags = ["/c", f"/Fo{out}"]
+    flags = ["/D_BIPBUILD_", "/c", f"/Fo{out}"]
+    if self.optimized:
+      flags.extend(["/DNDEBUG", "/Ot"])
+    else:
+      flags.extend(["/DDEBUG", "/Od /RTC1 /sdl /Wall"])
 
     if src.suffix.removeprefix(".") in C_EXTS:
       flags.extend(["/TC", f"/std:{inf.c.std}"])
