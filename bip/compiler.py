@@ -95,7 +95,7 @@ class GNULike(Compiler):
     if self.optimized:
       flags.extend(["-DNDEBUG", "-flto", "-O3"])
     else:
-      flags.extend(["-DDEBUG", "-O0", "-g", "-Wall", "-Wpedantic", "-Wextra"])
+      flags.extend(["-DDEBUG", "-O0", "-glldb", "-Wall", "-Wpedantic", "-Wextra"])
 
     if src.suffix.removeprefix(".") in C_EXTS:
       flags.extend(["-xc", f"--std={inf.c.std}"])
@@ -116,6 +116,8 @@ class GNULike(Compiler):
     flags = [f"-L{out.parent}", "-o", f"{out}"]
     if self.optimized:
       flags.extend(["-flto"])
+    else:
+      flags.extend(["-g"])
 
     if len(inf.link) > 0:
       flags.append("-Wl," + ",".join(inf.link))
@@ -132,6 +134,8 @@ class GNULike(Compiler):
     flags = ["-fPIC", "-shared", f"-L{out.parent}", "-o", f"{out}"]
     if self.optimized:
       flags.extend(["-flto"])
+    else:
+      flags.extend(["-g"])
 
     if len(inf.link) > 0:
       flags.append("-Wl," + ",".join(inf.link))
