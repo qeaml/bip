@@ -30,7 +30,7 @@ class CInfo:
     return cls(std)
 
   def merge(self, other: "CInfo") -> "CInfo":
-    std = other.std if other.std != "" else self.std if self.std != "" else "c++11"
+    std = other.std if other.std != "" else self.std if self.std != "" else "c11"
     return CInfo(std)
 
 @dataclass
