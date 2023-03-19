@@ -38,6 +38,7 @@ class Info:
   incl: list[Path]
   libs: list[str]
   link: list[str]
+  opt: bool
   log: common.Log
 
   c: CInfo
@@ -47,16 +48,6 @@ class Compiler(ABC):
   @property
   @abstractmethod
   def obj_ext(self) -> str:
-    pass
-
-  @property
-  @abstractmethod
-  def optimized(self) -> bool:
-    pass
-
-  @optimized.setter
-  @abstractmethod
-  def optimized(self, opt: bool) -> None:
     pass
 
   @abstractmethod
@@ -73,7 +64,6 @@ class Compiler(ABC):
 
 class GNULike(Compiler):
   _cmd: str
-  _opt: bool = False
 
   def __init__(self, cmd: str):
     self._cmd = cmd
@@ -82,18 +72,10 @@ class GNULike(Compiler):
   def obj_ext(self) -> str:
     return "o"
 
-  @property
-  def optimized(self) -> bool:
-    return self._opt
-
-  @optimized.setter
-  def optimized(self, opt: bool) -> None:
-    self._opt = opt
-
   def compile_obj(self, inf: Info, src: Path, out: Path) -> bool:
     flags = ["-D_BIPBUILD_", "-c", "-o", f"{out}"]
-    if self.optimized:
-      flags.extend(["-DNDEBUG", "-flto", "-O3"])
+    if inf.opt:
+      flags.extend(["-DNDEBUG", "-O3"])
     else:
       flags.extend(["-DDEBUG", "-O0", "-glldb", "-Wall", "-Wpedantic", "-Wextra"])
 
@@ -114,9 +96,7 @@ class GNULike(Compiler):
 
   def build_exe(self, inf: Info, objs: list[Path], out: Path) -> bool:
     flags = [f"-L{out.parent}", "-o", f"{out}"]
-    if self.optimized:
-      flags.extend(["-flto"])
-    else:
+    if not inf.opt:
       flags.extend(["-g"])
 
     if len(inf.link) > 0:
@@ -132,9 +112,7 @@ class GNULike(Compiler):
 
   def build_lib(self, inf: Info, objs: list[Path], out: Path) -> bool:
     flags = ["-fPIC", "-shared", f"-L{out.parent}", "-o", f"{out}"]
-    if self.optimized:
-      flags.extend(["-flto"])
-    else:
+    if not inf.opt:
       flags.extend(["-g"])
 
     if len(inf.link) > 0:
@@ -150,23 +128,14 @@ class GNULike(Compiler):
 
 class MSVC(Compiler):
   _CMD_BASE = "CL /nologo "
-  _opt: bool = False
 
   @property
   def obj_ext(self) -> str:
     return "obj"
 
-  @property
-  def optimized(self) -> bool:
-    return self._opt
-
-  @optimized.setter
-  def optimized(self, opt: bool) -> None:
-    self._opt = opt
-
   def compile_obj(self, inf: Info, src: Path, out: Path) -> bool:
     flags = ["/D_BIPBUILD_", "/c", f"/Fo{out}"]
-    if self.optimized:
+    if inf.opt:
       flags.extend(["/DNDEBUG", "/Ot"])
     else:
       flags.extend(["/DDEBUG", "/Od /RTC1 /sdl /Wall"])

@@ -13,6 +13,7 @@ class Info:
   obj_dir: Path
   incl_dirs: list[Path]
   cc: compiler.Compiler
+  opt: bool
   log: common.Log
 
   def obj_file(self, src_dir: str, src_file: Path) -> Path:

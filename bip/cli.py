@@ -22,6 +22,7 @@ def build(args: Args, root: Path, log: common.Log) -> int:
   recipe = Recipe.from_dict(log, root, recipe_data)
   if recipe is None:
     return 2
+  recipe.bld.opt = "opt" in args.named
 
   if not recipe.build():
     return 3

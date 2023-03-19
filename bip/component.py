@@ -99,12 +99,17 @@ class Component:
     return True
 
   def build(self, bld: build.Info, c_info: compiler.CInfo, cpp_info: compiler.CPPInfo, log: common.Log) -> bool:
+    if bld.opt:
+      log.verbose("Building WITH optimizations.")
+    else:
+      log.verbose("Building WITHOUT optimizations.")
+
     objs = self._built
     incl = self.incl_dirs
     incl.extend(bld.incl_dirs)
     obj_info = compiler.Info(
       incl, [],
-      self.link_args, log,
+      self.link_args, bld.opt, log,
       c_info.merge(self.c_info),
       cpp_info.merge(self.cpp_info))
     for src_file, obj_file in self._rebuild:
@@ -122,7 +127,7 @@ class Component:
     final_file.parent.mkdir(exist_ok=True, parents=True)
     final_info = compiler.Info(
       [], self.libs,
-      self.link_args, log,
+      self.link_args, bld.opt, log,
       c_info.merge(self.c_info),
       cpp_info.merge(self.cpp_info))
     log.verbose(f"Building executable {final_file} from:")

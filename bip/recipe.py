@@ -40,7 +40,7 @@ class Recipe:
 
     bld = build.Info(
       root, src, out, obj, incl,
-      compiler.COMPILERS[cc], log
+      compiler.COMPILERS[cc], False, log
     )
 
     components = []
