@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Tuple
+from datetime import datetime
 import bip.build as build
 import bip.compiler as compiler
 import bip.common as common
@@ -104,6 +105,8 @@ class Component:
     else:
       log.verbose("Building WITHOUT optimizations.")
 
+    start_time = datetime.now()
+
     objs = self._built
     incl = self.incl_dirs
     incl.extend(bld.incl_dirs)
@@ -133,7 +136,11 @@ class Component:
     log.verbose(f"Building executable {final_file} from:")
     for o in objs:
       log.verbose(f"  - {o}")
+    ok: bool
     if self.is_exe:
-      return bld.cc.build_exe(final_info, objs, final_file)
+      ok = bld.cc.build_exe(final_info, objs, final_file)
     else:
-      return bld.cc.build_lib(final_info, objs, final_file)
+      ok = bld.cc.build_lib(final_info, objs, final_file)
+    total_time = datetime.now() - start_time
+    log.verbose(f" -- Built in {total_time}")
+    return ok

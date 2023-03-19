@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, Optional
 from pathlib import Path
+from datetime import datetime
 import bip.build as build
 import bip.component as component
 import bip.compiler as compiler
@@ -73,6 +74,7 @@ class Recipe:
     return Recipe(bld, c_info, cpp_info, log, components)
 
   def build(self) -> bool:
+    start_time = datetime.now()
     self.bld.out_dir.mkdir(parents=True, exist_ok=True)
     self.bld.obj_dir.mkdir(parents=True, exist_ok=True)
     for c in self.components:
@@ -81,4 +83,6 @@ class Recipe:
       if not c.build(self.bld, self.c_info, self.cpp_info, self.log):
         self.log.err("Build failed. Aborting")
         return False
+    total_time = datetime.now() - start_time
+    self.log.verbose(f" === Built all in {total_time}")
     return True
