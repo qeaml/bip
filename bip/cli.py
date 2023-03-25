@@ -44,14 +44,7 @@ def clean(args: Args, root: Path, log: common.Log) -> int:
     return 2
 
   for c in recipe.components:
-    if not c.clean(recipe.bld, log):
+    if not c.clean(recipe.bld):
       return 3
-    out: Path
-    if c.is_exe:
-      out = recipe.bld.exe_file(c.out_fn)
-    else:
-      out = recipe.bld.lib_file(c.out_fn)
-    log.verbose(f"Removing: {out}")
-    out.unlink(missing_ok=True)
 
   return 0

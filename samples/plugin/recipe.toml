@@ -1,0 +1,12 @@
+# example recipe using a plugin to build
+[build]
+src = "source"
+out = "target"
+obj = "target/build"
+incl = [ "include", "lib_include" ]
+cc = "msvc"
+
+# this will import the plugin module from source/testplug and call functions
+# from it
+[myplugin]
+plug = "testplug"

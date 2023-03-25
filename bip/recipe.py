@@ -49,17 +49,17 @@ class Recipe:
       if cname == "build":
         continue
 
-      if "exe" not in cdata and "lib" not in cdata:
-        log.err(f"Invalid recipe: component {cname}: must specify either 'exe' or 'lib'")
-        return None
-
-      is_exe = "exe" in cdata
-      if is_exe and "lib" in cdata:
-        log.err(f"Invalid recipe: component {cname}: cannot specify both 'exe' and 'lib' at the same time")
-        return None
+      cout: str
+      ctype = component.Type.invalid
+      for typename in component.Type.__members__:
+        if typename in cdata:
+          cout = cdata[typename]
+          ctype = component.Type[typename]
+          break
+      if ctype == component.Type.invalid:
+        log.err(f"Invalid recipe: component {cname}: unknown or invalid component type")
 
       csrc = cdata.get("src", cname)
-      cout = cdata["exe"] if is_exe else cdata["lib"]
       libs = cdata.get("libs", [])
       incl_dirs = [Path(i) for i in cdata.get("incl", [])]
       link_args = cdata.get("link", [])
@@ -68,19 +68,20 @@ class Recipe:
       ccpp_info = compiler.CPPInfo.from_dict(cdata.get("cpp", {}))
 
       components.append(component.Component(
-        cname, libs, incl_dirs, link_args, cc_info, ccpp_info, csrc, is_exe, cout,
+        cname, libs, incl_dirs, link_args, cc_info, ccpp_info, csrc, ctype, cout,
       ))
 
     return Recipe(bld, c_info, cpp_info, log, components)
 
   def build(self) -> bool:
     start_time = datetime.now()
+    self.bld.log = self.log
     self.bld.out_dir.mkdir(parents=True, exist_ok=True)
     self.bld.obj_dir.mkdir(parents=True, exist_ok=True)
     for c in self.components:
-      if not c.should_build(self.bld, self.log):
+      if not c.should_build(self.bld):
         continue
-      if not c.build(self.bld, self.c_info, self.cpp_info, self.log):
+      if not c.build(self.bld, self.c_info, self.cpp_info):
         self.log.err("Build failed. Aborting")
         return False
     total_time = datetime.now() - start_time
