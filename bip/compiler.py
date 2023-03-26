@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import bip.common as common
 import subprocess
+import sys
 
 C_EXTS = ["c"]
 CPP_EXTS = ["cpp", "cxx", "cc"]
@@ -68,12 +69,18 @@ class GNULike(Compiler):
   def __init__(self, cmd: str):
     self._cmd = cmd
 
+  def _linker(self) -> str:
+    if self._cmd == "clang" and sys.platform.startswith("win"):
+      return "lld-link"
+    return ""
+
   @property
   def obj_ext(self) -> str:
     return "o"
 
   def compile_obj(self, inf: Info, src: Path, out: Path) -> bool:
     flags = ["-D_BIPBUILD_", "-c", "-o", f"{out}"]
+
     if inf.opt:
       flags.extend(["-DNDEBUG", "-O3"])
     else:
@@ -96,8 +103,14 @@ class GNULike(Compiler):
 
   def build_exe(self, inf: Info, objs: list[Path], out: Path) -> bool:
     flags = [f"-L{out.parent}", "-o", f"{out}"]
-    if not inf.opt:
-      flags.extend(["-g"])
+
+    if (linker := self._linker()) != "":
+      flags.append(f"-fuse-ld={linker}")
+
+    if inf.opt:
+      flags.append("-flto")
+    else:
+      flags.append("-g")
 
     if len(inf.link) > 0:
       flags.append("-Wl," + ",".join(inf.link))
@@ -112,8 +125,14 @@ class GNULike(Compiler):
 
   def build_lib(self, inf: Info, objs: list[Path], out: Path) -> bool:
     flags = ["-fPIC", "-shared", f"-L{out.parent}", "-o", f"{out}"]
-    if not inf.opt:
-      flags.extend(["-g"])
+
+    if (linker := self._linker()) != "":
+      flags.append(f"-fuse-ld={linker}")
+
+    if inf.opt:
+      flags.append("-flto")
+    else:
+      flags.append("-g")
 
     if len(inf.link) > 0:
       flags.append("-Wl," + ",".join(inf.link))
