@@ -181,6 +181,8 @@ class Component:
 
   def clean(self, bld: build.Info) -> bool:
     if self.type == Type.plug:
+      if not self._ensure_plug(bld):
+        return False
       return self._plug.clean(bld) # type: ignore
     return self._clean(bld)
 
