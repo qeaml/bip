@@ -58,6 +58,7 @@ class Recipe:
           break
       if ctype == component.Type.invalid:
         log.err(f"Invalid recipe: component {cname}: unknown or invalid component type")
+        return None
 
       csrc = cdata.get("src", cname)
       libs = cdata.get("libs", [])
