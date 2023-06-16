@@ -68,7 +68,7 @@ class Component:
 
     out = bld.obj_dir.joinpath(self.src_dir)
     if not out.exists():
-      out.mkdir(exist_ok=True)
+      out.parent.mkdir(exist_ok=True, parents=True)
 
     for src_file in src.rglob("*"):
       if src_file.is_dir():
