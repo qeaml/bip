@@ -18,7 +18,7 @@ class CPPInfo:
     return cls(std)
 
   def merge(self, other: "CPPInfo") -> "CPPInfo":
-    std = other.std if other.std != "" else self.std if self.std != "" else "c11"
+    std = other.std if other.std != "" else self.std if self.std != "" else "c++17"
     return CPPInfo(std)
 
 @dataclass
@@ -65,13 +65,18 @@ class Compiler(ABC):
     pass
 
 class GNULike(Compiler):
-  _cmd: str
+  _c_cmd: str
+  _cpp_cmd: str
 
-  def __init__(self, cmd: str):
-    self._cmd = cmd
+  _with_cpp: bool
+
+  def __init__(self, c_cmd: str, cpp_cmd: str):
+    self._c_cmd = c_cmd
+    self._cpp_cmd = cpp_cmd
+    self._with_cpp = False
 
   def _linker(self) -> str:
-    if self._cmd == "clang" and sys.platform.startswith("win"):
+    if self._c_cmd == "clang" and sys.platform.startswith("win"):
       return "lld-link"
     return ""
 
@@ -80,7 +85,15 @@ class GNULike(Compiler):
     return "o"
 
   def compile_obj(self, inf: Info, src: Path, out: Path) -> bool:
-    flags = ["-D_BIPBUILD_", "-c", "-o", f"{out}"]
+    flags = []
+
+    if src.suffix.removeprefix(".") in C_EXTS:
+      flags.extend([self._c_cmd, "-xc", f"--std={inf.c.std}"])
+    if src.suffix.removeprefix(".") in CPP_EXTS:
+      flags.extend([self._cpp_cmd, "-xc++", f"--std={inf.cpp.std}"])
+      self._with_cpp = True
+
+    flags.extend(["-D_BIPBUILD_", "-c", "-o", f"{out}"])
 
     if inf.is_lib:
       flags.append("-fPIC")
@@ -88,25 +101,27 @@ class GNULike(Compiler):
     if inf.opt:
       flags.extend(["-DNDEBUG", "-O3"])
     else:
-      flags.extend(["-DDEBUG", "-O0", "-glldb", "-Wall", "-Wpedantic", "-Wextra"])
-
-    if src.suffix.removeprefix(".") in C_EXTS:
-      flags.extend(["-xc", f"--std={inf.c.std}"])
-    if src.suffix.removeprefix(".") in CPP_EXTS:
-      flags.extend(["-xc++", f"--std={inf.cpp.std}"])
+      flags.extend(["-DDEBUG", "-O0", "-g", "-Wall", "-Wpedantic", "-Wextra"])
 
     for i in inf.incl:
       flags.append(f"-I{i}")
 
     flags.append(f"{src}")
 
-    cmd = self._cmd + " " + " ".join(flags)
+    cmd = " ".join(flags)
     inf.log.verbose(cmd)
     return subprocess.run(cmd, shell=True).returncode == 0
     # return True
 
   def build_exe(self, inf: Info, objs: list[Path], out: Path) -> bool:
-    flags = [f"-L{out.parent}", "-o", f"{out}"]
+    flags = []
+
+    if self._with_cpp:
+      flags.append(self._cpp_cmd)
+    else:
+      flags.append(self._c_cmd)
+
+    flags.extend([f"-L{out.parent}", "-o", f"{out}"])
 
     if (linker := self._linker()) != "":
       flags.append(f"-fuse-ld={linker}")
@@ -122,13 +137,20 @@ class GNULike(Compiler):
       flags.append(f"{o}")
     for l in inf.libs:
       flags.append(f"-l{l}")
-    cmd = self._cmd + " " + " ".join(flags)
+    cmd = " ".join(flags)
     inf.log.verbose(cmd)
     return subprocess.run(cmd, shell=True).returncode == 0
     # return True
 
   def build_lib(self, inf: Info, objs: list[Path], out: Path) -> bool:
-    flags = ["-fPIC", "-shared", f"-L{out.parent}", "-o", f"{out}"]
+    flags = []
+
+    if self._with_cpp:
+      flags.append(self._cpp_cmd)
+    else:
+      flags.append(self._c_cmd)
+
+    flags.extend(["-fPIC", "-shared", f"-L{out.parent}", "-o", f"{out}"])
 
     if (linker := self._linker()) != "":
       flags.append(f"-fuse-ld={linker}")
@@ -144,7 +166,7 @@ class GNULike(Compiler):
       flags.append(f"{o}")
     for l in inf.libs:
       flags.append(f"-l{l}")
-    cmd = self._cmd + " " + " ".join(flags)
+    cmd = " ".join(flags)
     inf.log.verbose(cmd)
     return subprocess.run(cmd, shell=True).returncode == 0
     # return True
@@ -201,6 +223,7 @@ class MSVC(Compiler):
     return subprocess.run(cmd).returncode == 0
 
 COMPILERS = {
-  "clang": GNULike("clang"),
+  "clang": GNULike("clang", "clang++"),
+  "gcc": GNULike("gcc", "g++"),
   "msvc": MSVC(),
 }
