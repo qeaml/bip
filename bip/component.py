@@ -126,7 +126,8 @@ class Component:
     incl.extend(bld.incl_dirs)
     obj_info = compiler.Info(
       incl, [],
-      self.link_args, bld.opt, bld.log,
+      self.link_args, bld.opt, self.type == Type.lib,
+      bld.log,
       c_info.merge(self.c_info),
       cpp_info.merge(self.cpp_info))
     for src_file, obj_file in self._rebuild:
@@ -144,7 +145,8 @@ class Component:
     final_file.parent.mkdir(exist_ok=True, parents=True)
     final_info = compiler.Info(
       [], self.libs,
-      self.link_args, bld.opt, bld.log,
+      self.link_args, bld.opt, self.type == Type.lib,
+      bld.log,
       c_info.merge(self.c_info),
       cpp_info.merge(self.cpp_info))
     bld.log.verbose(f"Building executable {final_file} from:")

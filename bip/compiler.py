@@ -40,6 +40,7 @@ class Info:
   libs: list[str]
   link: list[str]
   opt: bool
+  is_lib: bool
   log: common.Log
 
   c: CInfo
@@ -80,6 +81,9 @@ class GNULike(Compiler):
 
   def compile_obj(self, inf: Info, src: Path, out: Path) -> bool:
     flags = ["-D_BIPBUILD_", "-c", "-o", f"{out}"]
+
+    if inf.is_lib:
+      flags.append("-fPIC")
 
     if inf.opt:
       flags.extend(["-DNDEBUG", "-O3"])
