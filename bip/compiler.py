@@ -98,7 +98,7 @@ class GNULike(Compiler):
 
     cmd = self._cmd + " " + " ".join(flags)
     inf.log.verbose(cmd)
-    return subprocess.run(cmd).returncode == 0
+    return subprocess.run(cmd, shell=True).returncode == 0
     # return True
 
   def build_exe(self, inf: Info, objs: list[Path], out: Path) -> bool:
@@ -142,7 +142,7 @@ class GNULike(Compiler):
       flags.append(f"-l{l}")
     cmd = self._cmd + " " + " ".join(flags)
     inf.log.verbose(cmd)
-    return subprocess.run(cmd).returncode == 0
+    return subprocess.run(cmd, shell=True).returncode == 0
     # return True
 
 class MSVC(Compiler):
