@@ -27,5 +27,9 @@ class Info:
     return exe
 
   def lib_file(self, fn: str) -> Path:
-    ext = ".dll" if sys.platform.startswith("win") else ".so"
-    return self.out_dir.joinpath(fn).with_suffix(ext)
+    prefix = ""
+    ext = ".dll"
+    if not sys.platform.startswith("win"):
+      prefix = "lib"
+      ext = ".so"
+    return self.out_dir.joinpath(prefix+fn).with_suffix(ext)
