@@ -1,3 +1,5 @@
 __pycache__
 samples/*/target
 *.egg-info
+compile_commands.json
+bip_old

@@ -4,6 +4,6 @@
   #define LIBRARY_API
 #endif
 
-LIBRARY_API const char *hello() {
+LIBRARY_API const char *hello(void) {
   return "Hello, foobar!";
 }
