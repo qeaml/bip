@@ -222,7 +222,10 @@ class CJob(Job):
       if is_cpp is None:
         continue
 
-      out = self.pathes.obj.joinpath(e.name).with_suffix(".o")
+      out = self.pathes.obj.joinpath(e.relative_to(self.pathes.src)).with_suffix(".o")
+      if not out.parent.exists():
+        out.parent.mkdir(parents=True, exist_ok=True)
+
       rebuild = False
       if not out.exists():
         rebuild = True
@@ -365,7 +368,8 @@ class PlugJob(Job):
         err(f"{mod_path} does not define run()")
         return False
 
-      self._module.configure(self.pathes, self._settings)
+      if not self._module.configure(self.pathes, self._settings): # type: ignore
+        return False
 
     return True
 
@@ -394,7 +398,7 @@ class PlugJob(Job):
       return self._module.compile_commands() # type: ignore
     return []
 
-def create_job(name: str, lang: Lang, type: Type, pathes: Pathes, settings: dict[str, str]) -> Optional[Job]:
+def create_job(out_fn: str, lang: Lang, type: Type, pathes: Pathes, settings: dict[str, str]) -> Optional[Job]:
   prefix = ""
   suffix = ""
   if type == Type.plug:
@@ -413,7 +417,7 @@ def create_job(name: str, lang: Lang, type: Type, pathes: Pathes, settings: dict
 
   pathes.obj.mkdir(parents=True, exist_ok=True)
   pathes.out.mkdir(parents=True, exist_ok=True)
-  pathes.out = pathes.out.joinpath(prefix + name).with_suffix(suffix)
+  pathes.out = pathes.out.joinpath(prefix + out_fn).with_suffix(suffix)
   if lang == Lang.c or lang == Lang.cpp:
     return CJob(type, pathes, settings)
   if lang == Lang.go:
@@ -477,7 +481,7 @@ class Component:
     else:
       lang_settings = raw
 
-    job = create_job(name, lang, type, pathes, lang_settings)
+    job = create_job(out_fn, lang, type, pathes, lang_settings)
     if job is None:
       err(f"Invalid job configuration for {name}: {lang.name} {type.name}",
         "This exact combination of langage & component type may not be supported.")
