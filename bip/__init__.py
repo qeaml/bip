@@ -90,21 +90,16 @@ class Pathes:
 
     return cls(root, src, out, obj)
 
-  @classmethod
-  def from_dict_with_base(cls, base: "Pathes", raw: dict[str, str]) -> "Pathes":
-    src = base.src
-    if "src" in raw:
-      src /= raw["src"]
-
-    out = base.out
-    if "out" in raw:
-      out /= raw["out"]
-
-    obj = base.obj
-    if "obj" in raw:
-      obj /= raw["obj"]
-
-    return cls(base.root, src, out, obj)
+  def overrides_from_dict(self, name: str, raw: dict[str, str]) -> "Pathes":
+    src_path = [Path(raw["src"])] if "src" in raw else [Path(name)]
+    out_path = [Path(raw["out"])] if "out" in raw else []
+    obj_path = [Path(raw["obj"])] if "obj" in raw else [Path(name)]
+    return Pathes(
+      self.root,
+      self.src.joinpath(*src_path),
+      self.out.joinpath(*out_path),
+      self.obj.joinpath(*obj_path),
+    )
 
 @dataclass
 class CompileCommand:
@@ -416,6 +411,8 @@ def create_job(name: str, lang: Lang, type: Type, pathes: Pathes, settings: dict
       case Platform.Darwin:
         suffix = ".dylib"
 
+  pathes.obj.mkdir(parents=True, exist_ok=True)
+  pathes.out.mkdir(parents=True, exist_ok=True)
   pathes.out = pathes.out.joinpath(prefix + name).with_suffix(suffix)
   if lang == Lang.c or lang == Lang.cpp:
     return CJob(type, pathes, settings)
@@ -465,11 +462,7 @@ class Component:
       lang = Lang[raw["lang"]]
       raw.pop("lang")
 
-    if type == Type.plug:
-      base_pathes.src /= out_fn
-    else:
-      base_pathes.src /= name
-    pathes = Pathes.from_dict_with_base(base_pathes, raw)
+    pathes = base_pathes.overrides_from_dict(name if type != Type.plug else out_fn, raw)
 
     if not pathes.src.exists():
       err("Invalid source path!",
