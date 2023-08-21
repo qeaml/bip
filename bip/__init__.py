@@ -531,10 +531,10 @@ class Recipe:
 
   def build(self) -> bool:
     for cmpnt in self.components:
-      note(f"* {cmpnt.name}")
       if not cmpnt.job.want_build():
         continue
 
+      note(f"* {cmpnt.name}")
       if not cmpnt.job.build():
         return False
 
