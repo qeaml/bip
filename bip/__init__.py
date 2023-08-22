@@ -156,11 +156,23 @@ class Job(ABC):
 
 g_opt = False
 
+@dataclass
+class CObj:
+  class Type(IntEnum):
+    C = 0      # use C driver
+    CPP = 1    # use C++ driver
+    WINRES = 2 # windows resource file
+
+  type: Type
+  src: Path
+  out: Path
+
 class CJob(Job):
   type: Type
   pathes: Pathes
 
   _cc: str
+  _cppc: str
   _incl: list[str]
   _libs: list[str]
   _link: list[str]
@@ -168,14 +180,9 @@ class CJob(Job):
   _cppstd: str
   _ld: Optional[str]
 
-  @dataclass
-  class Bld:
-    src: Path
-    out: Path
-    is_cpp: bool
-
-  _reuse_obj: list[Bld]
-  _build_obj: list[Bld]
+  _link_cpp: bool
+  _reuse_obj: list[CObj]
+  _build_obj: list[CObj]
 
   def __init__(self, type: Type, pathes: Pathes, settings: dict[str, Any]):
     super(CJob, self).__init__(type, pathes, settings)
@@ -183,6 +190,7 @@ class CJob(Job):
     self.pathes = pathes
     # TODO: figure out a default compiler?
     self._cc = settings.get("cc", "clang")
+    self._cppc = settings.get("cppc", "clang++")
     self._incl = settings.get("incl", [])
     self._libs = settings.get("libs", [])
     self._link = settings.get("link", [])
@@ -200,29 +208,46 @@ class CJob(Job):
 
   _C_EXTS = [".c"]
   _CPP_EXTS = [".cpp", ".cxx", ".cc"]
+  _WINRES_EXTS = [".rc"]
+
+  _OBJ_EXTS = {
+    CObj.Type.C: ".o",
+    CObj.Type.CPP: ".o",
+    CObj.Type.WINRES: ".res",
+  }
 
   def _discover_objs(self, root: Path):
     verbose(f"  discovering objects in {root}")
+    self._link_cpp = False
     for e in root.iterdir():
       if e.is_dir():
         self._discover_objs(e)
 
-      is_cpp = None
+      type = None
       for ext in self._C_EXTS:
         if e.name.endswith(ext):
-          is_cpp = False
+          type = CObj.Type.C
           break
 
-      if is_cpp is None:
+      if type is None:
         for ext in self._CPP_EXTS:
           if e.name.endswith(ext):
-            is_cpp = True
+            type = CObj.Type.CPP
+            self._link_cpp = True
             break
 
-      if is_cpp is None:
+      if g_platform == Platform.Windows and type is None:
+        for ext in self._WINRES_EXTS:
+          if e.name.endswith(ext):
+            type = CObj.Type.WINRES
+            break
+
+      if type is None:
         continue
 
-      out = self.pathes.obj.joinpath(e.relative_to(self.pathes.src)).with_suffix(".o")
+      out = self.pathes.obj                       \
+        .joinpath(e.relative_to(self.pathes.src)) \
+        .with_suffix(self._OBJ_EXTS[type])
       if not out.parent.exists():
         out.parent.mkdir(parents=True, exist_ok=True)
 
@@ -236,21 +261,21 @@ class CJob(Job):
 
       if rebuild:
         verbose(f"  {out} needs to be (re)build")
-        self._build_obj.append(CJob.Bld(e, out, is_cpp))
+        self._build_obj.append(CObj(type, e, out))
       else:
         verbose(f"  {out} will be reused")
-        self._reuse_obj.append(CJob.Bld(e, out, is_cpp))
+        self._reuse_obj.append(CObj(type, e, out))
 
   def want_build(self) -> bool:
     self._discover_objs(self.pathes.src)
     return len(self._build_obj) > 0 or not self.pathes.out.exists()
 
-  def _build_flags(self, obj: Bld) -> list[str]:
-    flags = [self._cc]
-    if obj.is_cpp:
-      flags.extend(["-xc++", f"--std={self._cppstd}"])
-    else:
-      flags.extend(["-xc", f"--std={self._cstd}"])
+  def _c_flags(self, obj: CObj) -> list[str]:
+    flags = []
+    if obj.type == CObj.Type.C:
+      flags.extend([self._cc, f"--std={self._cstd}"])
+    if obj.type == CObj.Type.CPP:
+      flags.extend([self._cppc, f"--std={self._cppstd}"])
     flags.extend(["-o", str(obj.out), "-c", str(obj.src)])
     flags.extend([f"-I{incl}" for incl in self._incl])
     if g_opt:
@@ -261,6 +286,23 @@ class CJob(Job):
       flags.extend(["-fPIC"])
     return flags
 
+  def _winres_flags(self, obj: CObj) -> list[str]:
+    flags = ["rc", "/nologo", "/fo", str(obj.out)]
+    for i in self._incl:
+      flags.extend(["/i", str(i)])
+    flags.append(str(obj.src))
+    return flags
+
+  def _build_flags(self, obj: CObj) -> list[str]:
+    match obj.type:
+      case CObj.Type.C:
+        return self._c_flags(obj)
+      case CObj.Type.CPP:
+        return self._c_flags(obj)
+      case CObj.Type.WINRES:
+        return self._winres_flags(obj)
+    return []
+
   def build(self) -> bool:
     obj_names = []
     for obj in self._build_obj:
@@ -270,7 +312,12 @@ class CJob(Job):
       obj_names.append(str(obj.out))
     obj_names.extend(str(p.out) for p in self._reuse_obj)
 
-    flags = [self._cc, f"-o", str(self.pathes.out), *obj_names, f"-L{self.pathes.out.parent}"]
+    flags = []
+    if self._link_cpp:
+      flags.append(self._cppc)
+    else:
+      flags.append(self._cc)
+    flags.extend([f"-o", str(self.pathes.out), *obj_names, f"-L{self.pathes.out.parent}"])
     flags.extend([f"-l{lib}" for lib in self._libs])
     flags.extend([f"-Wl,{arg}" for arg in self._link])
     if self._ld is not None:
