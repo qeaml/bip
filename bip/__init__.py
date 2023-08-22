@@ -51,7 +51,7 @@ def cmd(cmd: str) -> bool:
       log_cmd = cmd[:75] + "..."
     note(f"$ {log_cmd}")
 
-  return subprocess.run(cmd).returncode == 0
+  return subprocess.run(cmd, shell=True).returncode == 0
 
 def delete(file: Path):
   if file.exists():
