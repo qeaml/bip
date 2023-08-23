@@ -273,17 +273,20 @@ class CJob(Job):
   def _c_flags(self, obj: CObj) -> list[str]:
     flags = []
     if obj.type == CObj.Type.C:
-      flags.extend([self._cc, f"--std={self._cstd}"])
+      flags = [self._cc, f"--std={self._cstd}"]
     if obj.type == CObj.Type.CPP:
-      flags.extend([self._cppc, f"--std={self._cppstd}"])
-    flags.extend(["-o", str(obj.out), "-c", str(obj.src)])
+      flags = [self._cppc, f"--std={self._cppstd}"]
+    flags.extend([
+      "-c", str(obj.src),
+      f"-o{obj.out}",
+    ])
     flags.extend([f"-I{incl}" for incl in self._incl])
     if g_opt:
       flags.extend(["-DNDEBUG", "-O3"])
     else:
       flags.extend(["-DDEBUG", "-O0", "-g", "-Wall", "-Wpedantic", "-Wextra"])
-    if self.type == Type.lib and g_platform != Platform.Windows:
-      flags.extend(["-fPIC"])
+    if g_platform != Platform.Windows and self.type == Type.lib:
+      flags.append("-fPIC")
     return flags
 
   def _winres_flags(self, obj: CObj) -> list[str]:
@@ -317,7 +320,11 @@ class CJob(Job):
       flags.append(self._cppc)
     else:
       flags.append(self._cc)
-    flags.extend([f"-o", str(self.pathes.out), *obj_names, f"-L{self.pathes.out.parent}"])
+    flags.extend([
+      f"-o{self.pathes.out}",
+      f"-L{self.pathes.out.parent}",
+      *obj_names
+    ])
     flags.extend([f"-l{lib}" for lib in self._libs])
     flags.extend([f"-Wl,{arg}" for arg in self._link])
     if self._ld is not None:
@@ -328,6 +335,11 @@ class CJob(Job):
       flags.append("-g")
     if self.type == Type.lib:
       flags.extend(["-shared", "-fPIE"])
+    if g_platform != Platform.Windows:
+      flags.extend([
+        "-rpath", "$$ORIGIN",
+        f"-Wl,-rpath-link,{self.pathes.out.parent}"
+      ])
     return cmd(' '.join(flags))
 
   def clean(self) -> None:
