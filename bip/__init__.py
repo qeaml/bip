@@ -132,7 +132,7 @@ class CompileCommand:
       "output": str(self.output)
     }
 
-CompileCommands = list[CompileCommand]
+type CompileCommands = list[CompileCommand]
 
 class Type(IntEnum):
   invalid = -1
@@ -410,40 +410,84 @@ class GoJob(Job):
   def compile_commands(self) -> CompileCommands:
     return []
 
+@dataclass
+class IPlug:
+  _module: ModuleType
+
+  # the two required functions
+  type ConfigureFn = Callable[[Pathes, dict[str, str]], bool]
+  type WantRunFn = Callable[[], bool]
+  # the optional functions
+  type RunFn = Callable[[], bool]
+  type CleanFn = Callable[[], None]
+  type CompileCommandsFn = Callable[[], list[CompileCommand]]
+
+  configure: ConfigureFn
+  run: RunFn
+
+  want_run: Optional[WantRunFn]
+  clean: Optional[CleanFn]
+  compile_commands: Optional[CompileCommandsFn]
+
 class PlugJob(Job):
-  type: Type
+  typ: Type
   pathes: Pathes
 
   _settings: dict[str, str]
   _module: Optional[ModuleType]
 
-  def __init__(self, type: Type, pathes: Pathes, settings: dict[str, str]):
-    super(PlugJob, self).__init__(type, pathes, settings)
-    self.type = type
+  _plug: Optional[IPlug]
+
+  def __init__(self, typ: Type, pathes: Pathes, settings: dict[str, str]):
+    super(PlugJob, self).__init__(typ, pathes, settings)
+    self.typ = typ
     self.pathes = pathes
     self._settings = settings
-    self._module = None
+    self._plug = None
 
   def _ensure_module(self) -> bool:
-    if self._module is None:
+    if self._plug is None:
       mod_path = self.pathes.src.joinpath("plug.py")
       mod_spec = importlib.util.spec_from_file_location("plug", mod_path)
       if mod_spec is None:
         err(f"Could not import '{mod_path}'")
         return False
 
-      self._module = importlib.util.module_from_spec(mod_spec)
-      mod_spec.loader.exec_module(self._module) # type: ignore
+      module = importlib.util.module_from_spec(mod_spec)
+      if module is None:
+        err(f"Could not load '{mod_path}'")
+        return False
+      mod_spec.loader.exec_module(module)
 
-      if not hasattr(self._module, "configure"):
+      if not hasattr(module, "configure"):
         err(f"{mod_path} does not define configure(Pathes, dict)")
         return False
 
-      if not hasattr(self._module, "run"):
+      if not hasattr(module, "run"):
         err(f"{mod_path} does not define run()")
         return False
 
-      if not self._module.configure(self.pathes, self._settings): # type: ignore
+      want_run: Optional[FWantRun] = None
+      if hasattr(module, "want_run"):
+        want_run = module.want_run
+
+      clean: Optional[FClean] = None
+      if hasattr(module, "clean"):
+        clean = module.clean
+
+      compile_commands: Optional[FCompileCommands] = None
+      if hasattr(module, "compile_commands"):
+        compile_commands = module.compile_commands
+
+      self._plug = IPlug(
+        module,
+        module.configure,
+        module.run,
+        want_run,
+        clean,
+        compile_commands
+      )
+      if not self._plug.configure(self.pathes, self._settings):
         return False
 
     return True
@@ -451,26 +495,26 @@ class PlugJob(Job):
   def want_build(self) -> bool:
     if not self._ensure_module():
       return False
-    if hasattr(self._module, "want_run"):
-      return self._module.want_run() # type: ignore
+    if self._plug.want_run is not None:
+      return self._plug.want_run()
     return True
 
   def build(self) -> bool:
     if not self._ensure_module():
       return False
-    return self._module.run() # type: ignore
+    return self._plug.run()
 
   def clean(self) -> None:
     if not self._ensure_module():
       return
-    if hasattr(self._module, "clean"):
-      self._module.clean() # type: ignore
+    if self._plug.clean is not None:
+      self._plug.clean()
 
   def compile_commands(self) -> CompileCommands:
     if not self._ensure_module():
       return []
-    if hasattr(self._module, "compile_commands"):
-      return self._module.compile_commands() # type: ignore
+    if self._plug.compile_commands is not None:
+      return self._plug.compile_commands()
     return []
 
 def create_job(out_fn: str, lang: Lang, type: Type, pathes: Pathes, settings: dict[str, str]) -> Optional[Job]:
