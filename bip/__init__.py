@@ -487,6 +487,7 @@ def create_job(out_fn: str, lang: Lang, type: Type, pathes: Pathes, settings: di
 class Component:
   name: str
   job: Job
+  platform: Optional[Platform]
 
   @classmethod
   def from_dict(cls, name: str, raw: dict[str, str], base_pathes: Pathes, base_lang_settings: dict[str, dict[str, str]]) -> Optional["Component"]:
@@ -546,7 +547,13 @@ class Component:
         "This exact combination of langage & component type may not be supported.")
       return None
 
-    return cls(name, job)
+    plat = None
+    if "platform" in raw:
+      for platname in Platform.__members__:
+        if platname == raw["platform"]:
+          plat = Platform[platname]
+
+    return cls(name, job, plat)
 
 @dataclass
 class Recipe:
@@ -584,6 +591,9 @@ class Recipe:
       cmpnt = Component.from_dict(name, cmpnt_raw, pathes, lang_settings)
       if cmpnt is None:
         return None
+      if cmpnt.platform is not None:
+        if cmpnt.platform != g_platform:
+          continue
       components.append(cmpnt)
 
     return cls(pathes, components)

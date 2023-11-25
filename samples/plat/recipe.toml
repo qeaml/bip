@@ -1,0 +1,19 @@
+[build]
+src = "source"
+out = "target"
+obj = "target/build"
+
+[io_win]
+lib = "io"
+lang = "c"
+platform = "Windows"
+
+[io_linux]
+lib = "io"
+lang = "c"
+platform = "Linux"
+
+[io_osx]
+lib = "io"
+lang = "c"
+platform = "Darwin"
