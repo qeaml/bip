@@ -13,11 +13,33 @@ import tomllib
 from types import ModuleType
 from typing import Any, Optional
 
+@dataclass
+class Version:
+  major: int
+  minor: int
+  patch: int
+
+g_version = Version(1, 0, 0)
+
 class Platform(IntEnum):
   Unspecified = -1
   Linux = 0
   Windows = 1
   Darwin = 2
+
+g_platnames = {
+  "win": Platform.Windows,
+  "win32": Platform.Windows,
+  "windows": Platform.Windows,
+
+  "linux": Platform.Linux,
+  "unix": Platform.Linux,
+
+  "osx": Platform.Darwin,
+  "darwin": Platform.Darwin,
+  "mac": Platform.Darwin,
+  "macosx": Platform.Darwin,
+}
 
 g_platform = Platform.Unspecified
 g_verbose = False
@@ -549,9 +571,12 @@ class Component:
 
     plat = None
     if "platform" in raw:
-      for platname in Platform.__members__:
-        if platname == raw["platform"]:
-          plat = Platform[platname]
+      platname = raw["platform"]
+      if platname.lower() in g_platnames:
+        plat = g_platnames[platname.lower()]
+      else:
+        warn(f"Component `{name}` specifies invalid platform restriction: `{platname}`")
+        plat = Platform.Unspecified
 
     return cls(name, job, plat)
 
@@ -593,6 +618,7 @@ class Recipe:
         return None
       if cmpnt.platform is not None:
         if cmpnt.platform != g_platform:
+          verbose(f"  ignoring {cmpnt.name} due to platform restriction {cmpnt.platform.name}")
           continue
       components.append(cmpnt)
 
@@ -708,6 +734,8 @@ def main() -> int:
 
   g_verbose = "v" in g_flags or "verbose" in g_flags
   g_opt = "o" in g_flags or "opt" in g_flags
+
+  verbose(f"bip v{g_version.major}.{g_version.minor}.{g_version.patch}")
 
   if len(g_pos_args) < 1:
     err("No action specified!")

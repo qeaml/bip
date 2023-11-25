@@ -16,4 +16,9 @@ platform = "Linux"
 [io_osx]
 lib = "io"
 lang = "c"
-platform = "Darwin"
+platform = "osx"
+
+[io_other]
+lib = "io"
+lang = "c"
+platform = "(some other inexistent platform)"
