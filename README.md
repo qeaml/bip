@@ -2,6 +2,11 @@
 
 **b**uild **i**t **p**lease is a more complex version of [qcbs][qcbs].
 
+## Welcome to the `bip3` branch
+
+This branch will contain a complete rewrite of bip in zig, adorning the name
+bip 3.0
+
 ## Main difference between bip and qcbs
 
 qcbs is very much usable for smaller projects, like individual CLI tools or
