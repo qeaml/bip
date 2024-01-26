@@ -11,7 +11,8 @@ import sys
 import textwrap
 import tomllib
 from types import ModuleType
-from typing import Any, Optional
+from typing import Any, Optional, Callable
+from shutil import copy, copytree, rmtree
 
 g_version = (2, 1)
 
@@ -58,21 +59,61 @@ def err(msg: str, err_tip = "") -> None:
   if err_tip != "":
     tip(err_tip)
 
+LOG_MAX_LINE_LEN = 120
+
 def cmd(cmd: str) -> bool:
   if g_verbose:
     note(f"$ {cmd}")
   else:
     log_cmd = cmd
-    if len(cmd) >= 78:
-      log_cmd = cmd[:75] + "..."
+    if len(cmd) >= LOG_MAX_LINE_LEN - 2:
+      log_cmd = cmd[:LOG_MAX_LINE_LEN - 5] + "..."
     note(f"$ {log_cmd}")
 
   return subprocess.run(cmd, shell=True).returncode == 0
 
-def delete(file: Path):
+def copyfile(src: Path, dst: Path) -> bool:
+  if not src.exists():
+    warn(f"Cannot copy file {src} because it does not exist")
+    return False
+
+  note(f"> {src} -> {dst}")
+  copy(src, dst)
+  return True
+
+def copydir(src: Path, dst: Path) -> bool:
+  if not src.exists():
+    warn(f"Cannot copy directory {src} because it does not exist")
+    return False
+  if dst.exists():
+    return True
+
+  note(f"> {src} -> {dst}")
+  copytree(src, dst)
+  return True
+
+def delete(file: Path) -> None:
   if file.exists():
     note(f"~ {file}")
     unlink(file)
+
+delfile = delete
+
+def deldir(dir: Path) -> None:
+  if dir.exists():
+    note(f"~ {dir}")
+    rmtree(dir)
+
+def link(target: Path, linkname: Path) -> bool:
+  if not target.exists():
+    warn(f"Cannot create a link to {target} because it does not exist")
+    return False
+  if linkname.exists():
+    return True
+
+  note(f"& {target} <- {linkname}")
+  linkname.symlink_to(target, target_is_directory=target.is_dir())
+  return True
 
 @dataclass
 class Pathes:
@@ -132,13 +173,14 @@ class CompileCommand:
       "output": str(self.output)
     }
 
-type CompileCommands = list[CompileCommand]
+CompileCommands = list[CompileCommand]
 
 class Type(IntEnum):
   invalid = -1
   exe = 0
   lib = 1
   plug = 2
+  dep = 3
 
 class Lang(IntEnum):
   invalid = -1
@@ -415,12 +457,12 @@ class IPlug:
   _module: ModuleType
 
   # the two required functions
-  type ConfigureFn = Callable[[Pathes, dict[str, str]], bool]
-  type WantRunFn = Callable[[], bool]
+  ConfigureFn = Callable[[Pathes, dict[str, str]], bool]
+  WantRunFn = Callable[[], bool]
   # the optional functions
-  type RunFn = Callable[[], bool]
-  type CleanFn = Callable[[], None]
-  type CompileCommandsFn = Callable[[], list[CompileCommand]]
+  RunFn = Callable[[], bool]
+  CleanFn = Callable[[], None]
+  CompileCommandsFn = Callable[[], list[CompileCommand]]
 
   configure: ConfigureFn
   run: RunFn
@@ -438,9 +480,8 @@ class PlugJob(Job):
 
   _plug: Optional[IPlug]
 
-  def __init__(self, typ: Type, pathes: Pathes, settings: dict[str, str]):
-    super(PlugJob, self).__init__(typ, pathes, settings)
-    self.typ = typ
+  def __init__(self, pathes: Pathes, settings: dict[str, str]):
+    super(PlugJob, self).__init__(Type.plug, pathes, settings)
     self.pathes = pathes
     self._settings = settings
     self._plug = None
@@ -521,7 +562,7 @@ def create_job(out_fn: str, lang: Lang, type: Type, pathes: Pathes, settings: di
   prefix = ""
   suffix = ""
   if type == Type.plug:
-    return PlugJob(type, pathes, settings)
+    return PlugJob(pathes, settings)
   elif type == Type.exe and g_platform == Platform.Windows:
     suffix = ".exe"
   elif type == Type.lib:
