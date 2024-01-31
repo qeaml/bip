@@ -13,12 +13,12 @@ lib = "io"
 lang = "c"
 platform = "Linux"
 
-[io_osx]
+[io_mac]
 lib = "io"
 lang = "c"
-platform = "osx"
+platform = "mac"
 
-[io_other]
-lib = "io"
-lang = "c"
-platform = "(some other inexistent platform)"
+# [io_other]
+# lib = "io"
+# lang = "c"
+# platform = "(some other inexistent platform)"
