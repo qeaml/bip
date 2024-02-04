@@ -8,6 +8,7 @@ import component
 import lang
 import lang.c as C
 import plat
+import version
 
 
 @dataclass
@@ -31,6 +32,21 @@ class Recipe:
             return None
 
         build = raw.pop("build")
+
+        if "bip" in build:
+            raw_reqr = build.pop("bip")
+            reqr = version.parse_reqr(raw_reqr)
+            if reqr is None:
+                cli.warn(f"Could not parse version requirement: {raw_reqr}")
+            else:
+                print(reqr)
+                if not reqr.is_satisfied():
+                    cli.error(
+                        f"This recipe is meant for bip {raw_reqr}",
+                        f"You are currently using bip {version.version_str()}",
+                    )
+                    return None
+
         base_paths = component.Paths.from_dict(build)
 
         c_config = C.Config()

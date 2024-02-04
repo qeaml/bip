@@ -2,6 +2,7 @@
 src = "source"
 out = "target"
 obj = "target/build"
+bip = "3.0+"
 
 [build.c]
 define = {SOMETHING = 1}
