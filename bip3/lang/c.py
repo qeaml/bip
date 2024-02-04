@@ -41,13 +41,20 @@ class ObjectInfo:
 
 
 def _gnu_obj_args(info: ObjectInfo) -> list[str]:
-    flags = ["-c", str(info.src), "-o", str(info.out)]
+    flags = []
+
+    if info.is_cpp:
+        flags.append("-xc++")
+    else:
+        flags.append("-xc")
+
+    flags.extend(["-c", str(info.src), "-o", str(info.out)])
 
     for i in info.include:
         flags.append(f"-I{i}")
 
-    if info.pic:
-        flags.append("-fpic")
+    # if info.pic:
+    #     flags.append("-fpic")
 
     if info.optimized:
         flags.extend(["-O3", "-flto", "-DNDEBUG=1"])
@@ -59,11 +66,6 @@ def _gnu_obj_args(info: ObjectInfo) -> list[str]:
             flags.append(f"-D{name}={val}")
         else:
             flags.append(f"-D{name}")
-
-    if info.is_cpp:
-        flags.append("-xc++")
-    else:
-        flags.append("-xc")
 
     flags.append(f"--std={info.std}")
 
@@ -95,7 +97,7 @@ def _msc_obj_args(info: ObjectInfo) -> list[str]:
     flags.extend([f"/std:{info.std}", "/permissive-"])
 
     # some additional flags to bring msvc to the modern day
-    flags.extend(["/nologo", "/diagnostics:caret", "/external:anglebrackets", "/utf-8"])
+    flags.extend(["/nologo", "/diagnostics:caret", "/utf-8"])
 
     return flags
 
@@ -142,6 +144,8 @@ def _gnu_lib_args(info: LinkInfo) -> list[str]:
 
     if info.linker is not None:
         flags.append(f"-fuse-ld={info.linker}")
+    elif plat.native() == plat.ID.WINDOWS:
+        flags.append("-fuse-ld=lld-link")
 
     for l in info.libs:
         flags.append(f"-l{l}")
@@ -159,6 +163,8 @@ def _msc_lib_args(info: LinkInfo) -> list[str]:
         flags.append("/LD")
     else:
         flags.append("/LDd")
+
+    flags.append("/nologo")
 
     for l in info.libs:
         flags.append(f"{l}.lib")
@@ -185,6 +191,8 @@ def _gnu_exe_args(info: LinkInfo) -> list[str]:
 
     if info.linker is not None:
         flags.append(f"-fuse-ld={info.linker}")
+    elif plat.native() == plat.ID.WINDOWS:
+        flags.append("-fuse-ld=lld-link")
 
     for l in info.libs:
         flags.append(f"-l{l}")
@@ -202,6 +210,8 @@ def _msc_exe_args(info: LinkInfo) -> list[str]:
         flags.append("/MD")
     else:
         flags.append("/MDd")
+
+    flags.append("/nologo")
 
     for l in info.libs:
         flags.append(f"{l}.lib")

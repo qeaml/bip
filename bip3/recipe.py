@@ -14,7 +14,6 @@ import plat
 class Recipe:
     path: Path
     components: list[component.Component]
-    optimized: bool
     lang_config: lang.MultiConfig
 
     @classmethod
@@ -54,4 +53,4 @@ class Recipe:
                     continue
             components.append(cmpnt)
 
-        return cls(path, components, False, lang_config)
+        return cls(path, components, lang_config)

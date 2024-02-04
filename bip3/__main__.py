@@ -2,8 +2,9 @@ from pathlib import Path
 from typing import Optional
 
 import cli
-from version import version_str
+from component.abc import RunInfo
 from recipe import Recipe
+from version import version_str
 
 USAGE = """
 Usage: %s <action> [options...]
@@ -42,7 +43,7 @@ def main(args: list[str]) -> int:
         cli.error("Could not load recipe file.")
         return 2
 
-    recipe.optimized = "opt" in args.flags
+    info = RunInfo("opt" in args.flags)
 
     match args.pos[0].lower():
         case "check":
@@ -58,7 +59,7 @@ def main(args: list[str]) -> int:
         case "build":
             for c in recipe.components:
                 if c.want_run():
-                    if not c.run():
+                    if not c.run(info):
                         return 3
             return 0
         case _:

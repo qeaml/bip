@@ -2,6 +2,7 @@
 Command-line argument parsing & terminal output.
 """
 
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -81,7 +82,7 @@ def error(text: str, tip: Optional[str] = None) -> None:
 
 
 def progress(text: str) -> None:
-    print(f"{BOLD}{text}{DEFAULT}")
+    print(f"{BOLD}{text}{NO_BOLD}")
 
 
 # Quote an argument if necessary
@@ -94,3 +95,10 @@ def quote(arg: str) -> str:
 # Join arguments into a string.
 def join(args: list[str]) -> str:
     return " ".join(quote(a) for a in args)
+
+
+# Run a command
+def cmd(exe: str, args: list[str]) -> bool:
+    full = join([exe, *args])
+    progress(f"$ {full}")
+    return subprocess.run(full, shell=True).returncode == 0

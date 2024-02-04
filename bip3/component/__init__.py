@@ -39,9 +39,11 @@ def from_dict(
             return None
 
     kind = None
+    out_name = None
     for k in Kind:
         if k.value in raw:
             kind = k
+            out_name = raw.pop(k.value)
             break
 
     if kind is None:
@@ -54,9 +56,13 @@ def from_dict(
 
     match kind:
         case Kind.EXE:
-            return ExeOrLibComponent.from_dict(raw, name, platcond, False, base_paths, lang_config)
+            return ExeOrLibComponent.from_dict(
+                raw, name, out_name, platcond, False, base_paths, lang_config
+            )
         case Kind.LIB:
-            return ExeOrLibComponent.from_dict(raw, name, platcond, True, base_paths, lang_config)
+            return ExeOrLibComponent.from_dict(
+                raw, name, out_name, platcond, True, base_paths, lang_config
+            )
 
     cli.error(f"Component kind '{kind.value}' currently unimplemented.")
     return None

@@ -13,7 +13,7 @@ import lang
 import lang.c as C
 import plat
 
-from .abc import Component, Paths
+from .abc import Component, Paths, RunInfo
 
 
 # Language is used by EXE and LIB components.
@@ -48,6 +48,7 @@ class ExeOrLibComponent(Component):
     def __init__(
         self,
         name: str,
+        out_name: str,
         platcond: Optional[plat.ID],
         is_lib: bool,
         paths: Paths,
@@ -55,7 +56,7 @@ class ExeOrLibComponent(Component):
         lang_config: lang.MultiConfig,
         lang: Language,
     ):
-        super(ExeOrLibComponent, self).__init__(name, platcond)
+        super(ExeOrLibComponent, self).__init__(name, out_name, platcond)
         self._is_lib = is_lib
         self._paths = paths
         self._libs = libs
@@ -64,6 +65,10 @@ class ExeOrLibComponent(Component):
         self._cpp_config = lang_config.cpp
         self._reuse_obj = []
         self._compile_obj = []
+        if is_lib:
+            self._out_file = self._paths.out / self._lib_name()
+        else:
+            self._out_file = self._paths.out / self._exe_name()
 
         # initially assume C even if CPP is specified.
         # this will be changed to CPP later if necessary.
@@ -78,6 +83,7 @@ class ExeOrLibComponent(Component):
         cls,
         raw: dict,
         name: str,
+        out_name: str,
         platform: Optional[plat.ID],
         is_lib: bool,
         base_paths: Paths,
@@ -130,11 +136,19 @@ class ExeOrLibComponent(Component):
             libs = raw.pop("libs")
 
         return cls(
-            name, platform, is_lib, Paths(src, obj, out), libs, real_lang_config, lang
+            name,
+            out_name,
+            platform,
+            is_lib,
+            Paths(src, obj, out),
+            libs,
+            real_lang_config,
+            lang,
         )
 
     _reuse_obj: list[CodeObject]
     _compile_obj: list[CodeObject]
+    _out_file: Path
 
     def _add_obj(self, lang: Language, src: Path, obj: Path):
         if obj.exists():
@@ -181,23 +195,23 @@ class ExeOrLibComponent(Component):
 
     def want_run(self) -> bool:
         self._discover_obj(self._paths.src, self._paths.src)
-        return len(self._compile_obj) > 0
+        return len(self._compile_obj) > 0 or not self._out_file.exists()
 
-    def _exe_name(self, basename: str) -> str:
+    def _exe_name(self) -> str:
         match plat.native():
             case plat.ID.WINDOWS:
-                return basename + ".EXE"
+                return self.out_name + ".EXE"
             case _:
-                return basename
+                return self.out_name
 
-    def _lib_name(self, basename: str) -> str:
+    def _lib_name(self) -> str:
         match plat.native():
             case plat.ID.WINDOWS:
-                return basename + ".DLL"
+                return self.out_name + ".DLL"
             case _:
-                return "lib" + basename + ".so"
+                return "lib" + self.out_name + ".so"
 
-    def _build_c(self) -> bool:
+    def _build_c(self, info: RunInfo) -> bool:
         cmpnt_cfg = self._c_config
         if self._lang == Language.CPP:
             cmpnt_cfg = self._cpp_config
@@ -248,40 +262,34 @@ class ExeOrLibComponent(Component):
                 obj.src,
                 obj.obj,
                 cfg.include,
-                False,
+                info.optimized,
                 cfg.define,
                 obj.lang == Language.CPP,
                 std,
                 self._is_lib,
             )
-            cmd = [exe] + C.obj_args(compiler.style, info)
-            print(cli.join(cmd))
+            cli.cmd(exe, C.obj_args(compiler.style, info))
 
-        if self._is_lib:
-            out = self._paths.out / self._lib_name(self.name)
-        else:
-            out = self._paths.out / self._exe_name(self.name)
         info = C.LinkInfo(
             [obj.obj for obj in self._compile_obj + self._reuse_obj],
-            out,
+            self._out_file,
             [self._paths.out],
             self._libs,
-            False,
+            info.optimized,
             self._lang == Language.CPP,
             None,
         )
         if self._is_lib:
-            cmd = [exe] + C.lib_args(compiler.style, info)
+            cli.cmd(exe, C.lib_args(compiler.style, info))
         else:
-            cmd = [exe] + C.exe_args(compiler.style, info)
-        print(cli.join(cmd))
+            cli.cmd(exe, C.exe_args(compiler.style, info))
         return True
 
-    def run(self) -> bool:
+    def run(self, info: RunInfo) -> bool:
         if self._lang == Language.C or self._lang == Language.CPP:
-            return self._build_c()
+            return self._build_c(info)
         if self._lang == Language.GO:
-            return self._build_go()
+            return self._build_go(info)
         return False
 
     def clean(self) -> bool:

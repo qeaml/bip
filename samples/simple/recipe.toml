@@ -10,6 +10,9 @@ define = {SOMETHING = 1}
 lib = "hello"
 lang = "c"
 
+[hello.c]
+compiler = "msc"
+
 [main]
 exe = "main"
 lang = "c"
