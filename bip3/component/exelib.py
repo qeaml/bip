@@ -259,6 +259,7 @@ class ExeOrLibComponent(Component):
                 std = cpp_std
 
             info = C.ObjectInfo(
+                cfg,
                 obj.src,
                 obj.obj,
                 cfg.include,
@@ -271,6 +272,7 @@ class ExeOrLibComponent(Component):
             cli.cmd(exe, C.obj_args(compiler.style, info))
 
         info = C.LinkInfo(
+            cmpnt_cfg,
             [obj.obj for obj in self._compile_obj + self._reuse_obj],
             self._out_file,
             [self._paths.out],

@@ -7,6 +7,9 @@ bip = "3.0+"
 [build.c]
 define = {SOMETHING = 1}
 
+[build.cpp]
+noexcept = true
+
 [hello]
 lib = "hello"
 lang = "c"

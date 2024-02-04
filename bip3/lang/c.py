@@ -19,10 +19,45 @@ class FlagStyle(IntEnum):
     # similar to CL.EXE
     MSC = auto()
 
+DEFAULT_C_STD = "c17"
+DEFAULT_CPP_STD = "c++20"
+
+
+@dataclass
+class Config:
+    # Which compiler should be used. If not specified, then a default one is
+    # determined based on the current platform.
+    compiler: Optional[str] = None
+    # Which C/C++ standard to use. If not specified, then a default of C17 and
+    # C++20 is used.
+    std: Optional[str] = None
+    # Additional include directories.
+    include: list[Path] = field(default_factory=list)
+    # Preprocessor definitions. If a value is not specified, then the compiler
+    # defines the default, usually 1.
+    define: dict[str, Optional[str]] = field(default_factory=dict)
+    # C++: Disable exceptions.
+    noexcept: bool = False
+
+    # Load overrides from a dictionary
+    def load_overrides(self, raw: dict[str, Any]):
+        if "compiler" in raw:
+            self.compiler = raw.pop("compiler")
+        if "std" in raw:
+            self.std = raw.pop("std")
+        if "define" in raw:
+            self.define.update(raw.pop("define"))
+        if "include" in raw:
+            self.include.extend(raw.pop("include"))
+        if "noexcept" in raw:
+            self.noexcept = raw.pop("noexcept")
+
+
 
 # Information to compile an object file.
 @dataclass
 class ObjectInfo:
+    cfg: Config
     # Source file.
     src: Path
     # Output object file.
@@ -69,6 +104,9 @@ def _gnu_obj_args(info: ObjectInfo) -> list[str]:
 
     flags.append(f"--std={info.std}")
 
+    if info.cfg.noexcept:
+        flags.append("-fno-exceptions")
+
     return flags
 
 
@@ -114,6 +152,7 @@ def obj_args(style: FlagStyle, info: ObjectInfo) -> list[str]:
 # Information to link a shared library or an executable.
 @dataclass
 class LinkInfo:
+    cfg: Config
     # Object files.
     obj: list[Path]
     # Output file.
@@ -146,6 +185,9 @@ def _gnu_lib_args(info: LinkInfo) -> list[str]:
         flags.append(f"-fuse-ld={info.linker}")
     elif plat.native() == plat.ID.WINDOWS:
         flags.append("-fuse-ld=lld-link")
+
+    if info.cfg.noexcept:
+        flags.append("-fno-exceptions")
 
     for l in info.libs:
         flags.append(f"-l{l}")
@@ -193,6 +235,9 @@ def _gnu_exe_args(info: LinkInfo) -> list[str]:
         flags.append(f"-fuse-ld={info.linker}")
     elif plat.native() == plat.ID.WINDOWS:
         flags.append("-fuse-ld=lld-link")
+
+    if info.cfg.noexcept:
+        flags.append("-fno-exceptions")
 
     for l in info.libs:
         flags.append(f"-l{l}")
@@ -316,31 +361,3 @@ def default_compiler() -> Optional[Compiler]:
     return None
 
 
-DEFAULT_C_STD = "c17"
-DEFAULT_CPP_STD = "c++20"
-
-
-@dataclass
-class Config:
-    # Which compiler should be used. If not specified, then a default one is
-    # determined based on the current platform.
-    compiler: Optional[str] = None
-    # Which C/C++ standard to use. If not specified, then a default of C17 and
-    # C++20 is used.
-    std: Optional[str] = None
-    # Additional include directories.
-    include: list[Path] = field(default_factory=list)
-    # Preprocessor definitions. If a value is not specified, then the compiler
-    # defines the default, usually 1.
-    define: dict[str, Optional[str]] = field(default_factory=dict)
-
-    # Load overrides from a dictionary
-    def load_overrides(self, raw: dict[str, Any]):
-        if "compiler" in raw:
-            self.compiler = raw.pop("compiler")
-        if "std" in raw:
-            self.std = raw.pop("std")
-        if "define" in raw:
-            self.define.update(raw.pop("define"))
-        if "include" in raw:
-            self.include.extend(raw.pop("include"))
