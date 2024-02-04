@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Optional
 
 import cli
+from version import version_str
 from recipe import Recipe
 
 USAGE = """
@@ -9,6 +10,7 @@ Usage: %s <action> [options...]
 Where <action> can be:
     check -> ensure a recipe file is available and is valid
     build -> build the current recipe
+    clean -> remove all build artifacts
 """.strip()
 
 MAX_RECIPE_SEARCH_DEPTH = 7
@@ -46,9 +48,18 @@ def main(args: list[str]) -> int:
         case "check":
             print(f"Recipe file {recipe_path} is valid.")
             return 0
+        case "version":
+            print(version_str())
+            return 0
         case "clean":
             for c in recipe.components:
                 c.clean()
+            return 0
+        case "build":
+            for c in recipe.components:
+                if c.want_run():
+                    if not c.run():
+                        return 3
             return 0
         case _:
             print(USAGE % args.program)

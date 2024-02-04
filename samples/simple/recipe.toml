@@ -3,6 +3,9 @@ src = "source"
 out = "target"
 obj = "target/build"
 
+[build.c]
+define = {SOMETHING = 1}
+
 [hello]
 lib = "hello"
 lang = "c"
@@ -16,3 +19,9 @@ libs = [
 link = [
   "/SUBSYSTEM:CONSOLE"
 ]
+
+[main.c]
+define = {MAIN_BUILD = 1}
+
+[main.cpp]
+define = {MAIN_BUILD = 1}

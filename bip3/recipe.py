@@ -5,6 +5,8 @@ from typing import Optional
 
 import cli
 import component
+import lang
+import lang.c as C
 import plat
 
 
@@ -13,6 +15,7 @@ class Recipe:
     path: Path
     components: list[component.Component]
     optimized: bool
+    lang_config: lang.MultiConfig
 
     @classmethod
     def load(cls, path: Path) -> Optional["Recipe"]:
@@ -31,9 +34,19 @@ class Recipe:
         build = raw.pop("build")
         base_paths = component.Paths.from_dict(build)
 
+        c_config = C.Config()
+        if "c" in build:
+            raw_config = build.pop("c")
+            c_config.load_overrides(raw_config)
+        cpp_config = C.Config()
+        if "cpp" in build:
+            raw_config = build.pop("cpp")
+            cpp_config.load_overrides(raw_config)
+        lang_config = lang.MultiConfig(c_config, cpp_config)
+
         components = []
         for cmpnt_name, raw_cmpnt in raw.items():
-            cmpnt = component.from_dict(raw_cmpnt, cmpnt_name, base_paths)
+            cmpnt = component.from_dict(raw_cmpnt, cmpnt_name, base_paths, lang_config)
             if cmpnt is None:
                 return None
             if cmpnt.platform is not None:
@@ -41,4 +54,4 @@ class Recipe:
                     continue
             components.append(cmpnt)
 
-        return cls(path, components, False)
+        return cls(path, components, False, lang_config)

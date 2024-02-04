@@ -2,12 +2,13 @@
 C and C++ language support.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import IntEnum, auto
 from pathlib import Path
 from shutil import which
-from typing import Optional
-import bip3.platform
+from typing import Any, Optional
+
+import plat
 
 
 # CLI argument style for compiler invocations. This also decides the object file
@@ -36,6 +37,7 @@ class ObjectInfo:
     is_cpp: bool
     # Which C/C++ standard to use.
     std: str
+    pic: bool
 
 
 def _gnu_obj_args(info: ObjectInfo) -> list[str]:
@@ -44,8 +46,11 @@ def _gnu_obj_args(info: ObjectInfo) -> list[str]:
     for i in info.include:
         flags.append(f"-I{i}")
 
+    if info.pic:
+        flags.append("-fpic")
+
     if info.optimized:
-        flags.extend(["-O3", "-DNDEBUG=1"])
+        flags.extend(["-O3", "-flto", "-DNDEBUG=1"])
     else:
         flags.extend(["-O0", "-g", "-Wall", "-Wpedantic", "-Wextra", "-DDEBUG=1"])
 
@@ -62,7 +67,7 @@ def _gnu_obj_args(info: ObjectInfo) -> list[str]:
 
     flags.append(f"--std={info.std}")
 
-    return []
+    return flags
 
 
 def _msc_obj_args(info: ObjectInfo) -> list[str]:
@@ -92,7 +97,7 @@ def _msc_obj_args(info: ObjectInfo) -> list[str]:
     # some additional flags to bring msvc to the modern day
     flags.extend(["/nologo", "/diagnostics:caret", "/external:anglebrackets", "/utf-8"])
 
-    return []
+    return flags
 
 
 # Determine the flags for compiling an object file given the FlagStyle.
@@ -124,7 +129,7 @@ class LinkInfo:
 
 
 def _gnu_lib_args(info: LinkInfo) -> list[str]:
-    flags = ["-o", str(info.out)]
+    flags = ["-shared", "-o", str(info.out)]
 
     for f in info.obj:
         flags.append(str(f))
@@ -166,6 +171,49 @@ def _msc_lib_args(info: LinkInfo) -> list[str]:
     return flags
 
 
+def _gnu_exe_args(info: LinkInfo) -> list[str]:
+    flags = ["-o", str(info.out)]
+
+    for f in info.obj:
+        flags.append(str(f))
+
+    for d in info.lib_dirs:
+        flags.append(f"-L{d}")
+
+    if info.optimized:
+        flags.append("-flto")
+
+    if info.linker is not None:
+        flags.append(f"-fuse-ld={info.linker}")
+
+    for l in info.libs:
+        flags.append(f"-l{l}")
+
+    return flags
+
+
+def _msc_exe_args(info: LinkInfo) -> list[str]:
+    flags = [f"-Fe{info.out}"]
+
+    for f in info.obj:
+        flags.append(str(f))
+
+    if info.optimized:
+        flags.append("/MD")
+    else:
+        flags.append("/MDd")
+
+    for l in info.libs:
+        flags.append(f"{l}.lib")
+
+    flags.append("/link")
+
+    for d in info.lib_dirs:
+        flags.append(f"/LIBPATH:{d}")
+
+    return flags
+
+
 # Determine the flags for linking a shared library given the FlagStyle.
 def lib_args(style: FlagStyle, info: LinkInfo) -> list[str]:
     match style:
@@ -175,9 +223,19 @@ def lib_args(style: FlagStyle, info: LinkInfo) -> list[str]:
             return _msc_lib_args(info)
 
 
+def exe_args(style: FlagStyle, info: LinkInfo) -> list[str]:
+    match style:
+        case FlagStyle.GNU:
+            return _gnu_exe_args(info)
+        case FlagStyle.MSC:
+            return _msc_exe_args(info)
+
+
 # Generic information about a C or C++ compiler.
 @dataclass
 class Compiler:
+    # Name of compiler displayed to user.
+    name: str
     # C compiler executable. If None, the compiler does not support compiling C.
     c_compiler: Optional[str]
     # C++ compiler executable. If None, the compiler does not support compilig
@@ -189,9 +247,10 @@ class Compiler:
 
 # Some commonly used compilers.
 KNOWN_COMPILERS = {
-    "clang": Compiler("clang", "clang++", FlagStyle.GNU),
-    "gnu": Compiler("gcc", "g++", FlagStyle.GNU),
-    "msc": Compiler("cl", "cl", FlagStyle.MSC),
+    "clang": Compiler("Clang", "clang", "clang++", FlagStyle.GNU),
+    "gnu": Compiler("GCC", "gcc", "g++", FlagStyle.GNU),
+    "clang-cl": Compiler("clang-cl", "clang-cl", "clang-cl", FlagStyle.MSC),
+    "msc": Compiler("MSC", "cl", "cl", FlagStyle.MSC),
 }
 
 # Alternate names for compilers.
@@ -210,18 +269,23 @@ def find_compiler(name: str) -> Optional[Compiler]:
 
 # Check if the given compiler is available in our current environment.
 def has_compiler(name: str) -> Optional[Compiler]:
+    print("compiler", name)
     compiler = find_compiler(name)
     if compiler is None:
+        print("  not known")
         return None
 
     if compiler.c_compiler is not None:
         if which(compiler.c_compiler) is None:
+            print("  C frontend not present")
             return None
 
     if compiler.cpp_compiler is not None:
         if which(compiler.cpp_compiler) is None:
+            print("  C++ frontend not present")
             return None
 
+    print("  is OK")
     return compiler
 
 
@@ -231,12 +295,42 @@ def default_compiler() -> Optional[Compiler]:
     if option1 is not None:
         return option1
 
-    match platform.native():
-        case platform.ID.LINUX:
+    match plat.native():
+        case plat.ID.LINUX:
             return has_compiler("gnu")
-        case platform.ID.WINDOWS:
+        case plat.ID.WINDOWS:
             return has_compiler("msc")
-        case platform.ID.DARWIN:
+        case plat.ID.DARWIN:
             return has_compiler("gnu")
 
     return None
+
+
+DEFAULT_C_STD = "c17"
+DEFAULT_CPP_STD = "c++20"
+
+
+@dataclass
+class Config:
+    # Which compiler should be used. If not specified, then a default one is
+    # determined based on the current platform.
+    compiler: Optional[str] = None
+    # Which C/C++ standard to use. If not specified, then a default of C17 and
+    # C++20 is used.
+    std: Optional[str] = None
+    # Additional include directories.
+    include: list[Path] = field(default_factory=list)
+    # Preprocessor definitions. If a value is not specified, then the compiler
+    # defines the default, usually 1.
+    define: dict[str, Optional[str]] = field(default_factory=dict)
+
+    # Load overrides from a dictionary
+    def load_overrides(self, raw: dict[str, Any]):
+        if "compiler" in raw:
+            self.compiler = raw.pop("compiler")
+        if "std" in raw:
+            self.std = raw.pop("std")
+        if "define" in raw:
+            self.define.update(raw.pop("define"))
+        if "include" in raw:
+            self.include.extend(raw.pop("include"))
