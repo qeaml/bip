@@ -10,7 +10,7 @@ def version_str() -> str:
     return f"{VERSION[0]}.{VERSION[1]}.{VERSION[2]}{VERSION[3]}"
 
 
-REQR_REGEX = re.compile("^(<|<=|=|==|>=|>)?(\\d+)\\.(\\d+)(.(\\d+))?(\\+)?$")
+REQR_REGEX = re.compile("^(<|<=|=|==|>=|>)?(\\d+)\\.(\\d+)(?:.(\\d+))?(\\+)?$")
 
 
 class Comparator(IntEnum):
@@ -92,7 +92,7 @@ def parse_reqr(raw: str) -> Optional[Reqr]:
             case ">":
                 comparator = Comparator.GREATER
 
-    comp_suffix = res.group(6)
+    comp_suffix = res.group(5)
     if comp_suffix is not None:
         if comparator is not None:
             return None
@@ -104,7 +104,7 @@ def parse_reqr(raw: str) -> Optional[Reqr]:
     major = int(res.group(2))
     minor = int(res.group(3))
     patch = None
-    patch_group = res.group(5)
+    patch_group = res.group(4)
     if patch_group is not None:
         patch = int(patch_group)
 
