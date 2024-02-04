@@ -33,6 +33,11 @@ def main(args: list[str]) -> int:
         print(USAGE % args.program)
         return 1
 
+    match args.pos[0].lower():
+        case "version":
+            print(version_str())
+            return 0
+
     recipe_path = _find_recipe_file()
     if recipe_path is None:
         print(USAGE % args.program)
@@ -49,9 +54,7 @@ def main(args: list[str]) -> int:
         case "check":
             print(f"Recipe file {recipe_path} is valid.")
             return 0
-        case "version":
-            print(version_str())
-            return 0
+
         case "clean":
             for c in recipe.components:
                 c.clean()
