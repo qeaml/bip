@@ -7,6 +7,7 @@ from enum import IntEnum, auto
 from pathlib import Path
 from shutil import which
 from typing import Any, Optional
+import struct
 
 import plat
 

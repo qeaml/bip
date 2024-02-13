@@ -39,6 +39,7 @@ class CodeObject:
 # Component that compiles and links an executable or a shared library.
 class ExeOrLibComponent(Component):
     _is_lib: bool
+    _src_dirs: list[Path]
     _paths: Paths
     _libs: list[str]
     _lang: Language
@@ -51,6 +52,7 @@ class ExeOrLibComponent(Component):
         out_name: str,
         platcond: Optional[plat.ID],
         is_lib: bool,
+        src_dirs: list[Path],
         paths: Paths,
         libs: list[str],
         lang_config: lang.MultiConfig,
@@ -69,6 +71,7 @@ class ExeOrLibComponent(Component):
             self._out_file = self._paths.out / self._lib_name()
         else:
             self._out_file = self._paths.out / self._exe_name()
+        self._src_dirs = src_dirs
 
         # initially assume C even if CPP is specified.
         # this will be changed to CPP later if necessary.
@@ -107,11 +110,15 @@ class ExeOrLibComponent(Component):
             )
             return None
 
-        src: Path
+        src = []
         if "src" in raw:
-            src = base_paths.src / Path(raw["src"])
+            raw_src = raw["src"]
+            if isinstance(raw_src, list):
+                src = [base_paths.src / Path(s) for s in raw_src]
+            else:
+                src = [base_path.src / Path(raw_src)]
         else:
-            src = base_paths.src / name
+            src = [base_paths.src / name]
 
         obj: Path
         if "obj" in raw:
@@ -140,7 +147,8 @@ class ExeOrLibComponent(Component):
             out_name,
             platform,
             is_lib,
-            Paths(src, obj, out),
+            src,
+            Paths(base_paths.src, obj, out),
             libs,
             real_lang_config,
             lang,
@@ -194,7 +202,8 @@ class ExeOrLibComponent(Component):
             self._add_obj(src_lang, src, obj)
 
     def want_run(self) -> bool:
-        self._discover_obj(self._paths.src, self._paths.src)
+        for root in self._src_dirs:
+            self._discover_obj(self._paths.src, root)
         return len(self._compile_obj) > 0 or not self._out_file.exists()
 
     def _exe_name(self) -> str:
@@ -295,6 +304,6 @@ class ExeOrLibComponent(Component):
         return False
 
     def clean(self) -> bool:
-        self._discover_obj(self._paths.src, self._paths.src)
-        # TODO
+        for root in self._src_dirs:
+            self._discover_obj(self._paths.src, root)
         return False

@@ -13,3 +13,7 @@ differs from bip2.
   compiler if one isn't specified by the recipe or component. It will only pick
   compilers which are present in the current environment.
 * Support for defining C/C++ preprocessor macros.
+* Additional compiler command line flags passed for more consistent behavior
+  across different compilers (most notably MSC and GNU-like compilers). This
+  includes 64-bit code and SSE4.2 being required for optimized builds.
+  Whole-program optimization is now enabled for MSC-like compilers.

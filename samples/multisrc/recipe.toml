@@ -1,0 +1,25 @@
+[build]
+src = "source"
+obj = "target/build"
+out = "target"
+
+[build.c]
+include = ["include"]
+define = {MKDIR_BUILD=1}
+
+[mkdir_win]
+lib = "mkdir"
+platform = "win"
+src = ["mkdir", "mkdir_win"]
+lang = "c"
+
+[mkdir_linux]
+lib = "mkdir"
+platform = "linux"
+src = ["mkdir", "mkdir_linux"]
+lang = "c"
+
+[unimkdir]
+exe = "unimkdir"
+lang = "c"
+libs = ["mkdir"]
