@@ -1,9 +1,6 @@
-#if defined(_WIN32)
-  #define LIBRARY_API __declspec(dllexport)
-#else
-  #define LIBRARY_API
-#endif
+#include "api.h"
 
-LIBRARY_API const char *hello(void) {
+HELLO_API
+const char *hello( void ) {
   return "Hello, foobar!";
 }

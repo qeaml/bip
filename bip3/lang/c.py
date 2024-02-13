@@ -19,6 +19,7 @@ class FlagStyle(IntEnum):
     # similar to CL.EXE
     MSC = auto()
 
+
 DEFAULT_C_STD = "c17"
 DEFAULT_CPP_STD = "c++20"
 
@@ -51,7 +52,6 @@ class Config:
             self.include.extend(raw.pop("include"))
         if "noexcept" in raw:
             self.noexcept = raw.pop("noexcept")
-
 
 
 # Information to compile an object file.
@@ -88,13 +88,17 @@ def _gnu_obj_args(info: ObjectInfo) -> list[str]:
     for i in info.include:
         flags.append(f"-I{i}")
 
-    # if info.pic:
-    #     flags.append("-fpic")
+    if info.pic and plat.native() != plat.ID.WINDOWS:
+        flags.append("-fPIC")
+
+    flags.append("-m64")
 
     if info.optimized:
-        flags.extend(["-O3", "-flto", "-DNDEBUG=1"])
+        flags.extend(["-O3", "-flto", "-ffast-math", "-msse4.2", "-DNDEBUG=1"])
     else:
-        flags.extend(["-O0", "-g", "-Wall", "-Wpedantic", "-Wextra", "-DDEBUG=1"])
+        flags.extend(
+            ["-O0", "-g", "-Wall", "-Wpedantic", "-Wextra", "-DDEBUG=1", "-D_DEBUG"]
+        )
 
     for [name, val] in info.defines.items():
         if val is not None:
@@ -117,9 +121,9 @@ def _msc_obj_args(info: ObjectInfo) -> list[str]:
         flags.append(f"/I{i}")
 
     if info.optimized:
-        flags.extend(["/O2", "/DNDEBUG=1"])
+        flags.extend(["/O2", "/fp:fast", "/GL", "/DNDEBUG=1"])
     else:
-        flags.extend(["/Od", "/DEBUG", "/Wall", "/DDEBUG=1"])
+        flags.extend(["/Od", "/DEBUG", "/Wall", "/DDEBUG=1", "/D_DEBUG"])
 
     for [name, val] in info.defines.items():
         if val is not None:
@@ -202,7 +206,7 @@ def _msc_lib_args(info: LinkInfo) -> list[str]:
         flags.append(str(f))
 
     if info.optimized:
-        flags.append("/LD")
+        flags.extend(["/LD", "/GL"])
     else:
         flags.append("/LDd")
 
@@ -211,7 +215,7 @@ def _msc_lib_args(info: LinkInfo) -> list[str]:
     for l in info.libs:
         flags.append(f"{l}.lib")
 
-    flags.append("/link")
+    flags.extend(["/link", "/LTCG"])
 
     for d in info.lib_dirs:
         flags.append(f"/LIBPATH:{d}")
@@ -229,7 +233,7 @@ def _gnu_exe_args(info: LinkInfo) -> list[str]:
         flags.append(f"-L{d}")
 
     if info.optimized:
-        flags.append("-flto")
+        flags.extend(["-flto"])
 
     if info.linker is not None:
         flags.append(f"-fuse-ld={info.linker}")
@@ -252,7 +256,7 @@ def _msc_exe_args(info: LinkInfo) -> list[str]:
         flags.append(str(f))
 
     if info.optimized:
-        flags.append("/MD")
+        flags.extend(["/MD", "/GL"])
     else:
         flags.append("/MDd")
 
@@ -261,7 +265,7 @@ def _msc_exe_args(info: LinkInfo) -> list[str]:
     for l in info.libs:
         flags.append(f"{l}.lib")
 
-    flags.append("/link")
+    flags.extend(["/link", "/LTCG"])
 
     for d in info.lib_dirs:
         flags.append(f"/LIBPATH:{d}")
@@ -359,5 +363,3 @@ def default_compiler() -> Optional[Compiler]:
             return has_compiler("gnu")
 
     return None
-
-

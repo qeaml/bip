@@ -16,6 +16,7 @@ lang = "c"
 
 [hello.c]
 compiler = "msc"
+define = {HELLO_BUILD = 1}
 
 [main]
 exe = "main"
