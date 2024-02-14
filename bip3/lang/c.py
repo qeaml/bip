@@ -40,6 +40,9 @@ class Config:
     define: dict[str, Optional[str]] = field(default_factory=dict)
     # C++: Disable exceptions.
     noexcept: bool = False
+    # Should symbols default to hidden visibility (for GNU-like compilers on
+    # non-Windows platforms)
+    hide_symbols: bool = False
 
     # Load overrides from a dictionary
     def load_overrides(self, raw: dict[str, Any]):
@@ -53,6 +56,10 @@ class Config:
             self.include.extend(raw.pop("include"))
         if "noexcept" in raw:
             self.noexcept = raw.pop("noexcept")
+        if "hide_symbols" in raw:
+            self.hide_symbols = raw.pop("hide_symbols")
+        if "hide-symbols" in raw:
+            self.hide_symbols = raw.pop("hide-symbols")
 
 
 # Information to compile an object file.
@@ -93,6 +100,9 @@ def _gnu_obj_args(info: ObjectInfo) -> list[str]:
         flags.append("-fPIC")
 
     flags.append("-m64")
+
+    if info.cfg.hide_symbols:
+        flags.append("-fvisibility=hidden")
 
     if info.optimized:
         flags.extend(["-O3", "-flto", "-ffast-math", "-msse4.2", "-DNDEBUG=1"])
@@ -142,6 +152,9 @@ def _msc_obj_args(info: ObjectInfo) -> list[str]:
     # some additional flags to bring msvc to the modern day
     flags.extend(["/nologo", "/diagnostics:caret", "/utf-8"])
 
+    if info.optimized:
+        flags.extend(["/link", "/LTCG"])
+
     return flags
 
 
@@ -183,6 +196,9 @@ def _gnu_lib_args(info: LinkInfo) -> list[str]:
     for d in info.lib_dirs:
         flags.append(f"-L{d}")
 
+    if info.cfg.hide_symbols:
+        flags.append("-fvisibility=hidden")
+
     if info.optimized:
         flags.append("-flto")
 
@@ -216,7 +232,10 @@ def _msc_lib_args(info: LinkInfo) -> list[str]:
     for l in info.libs:
         flags.append(f"{l}.lib")
 
-    flags.extend(["/link", "/LTCG"])
+    flags.append("/link")
+
+    if info.optimized:
+        flags.append("/LTCG")
 
     for d in info.lib_dirs:
         flags.append(f"/LIBPATH:{d}")
@@ -266,7 +285,10 @@ def _msc_exe_args(info: LinkInfo) -> list[str]:
     for l in info.libs:
         flags.append(f"{l}.lib")
 
-    flags.extend(["/link", "/LTCG"])
+    flags.append("/link")
+
+    if info.optimized:
+        flags.append("/LTCG")
 
     for d in info.lib_dirs:
         flags.append(f"/LIBPATH:{d}")

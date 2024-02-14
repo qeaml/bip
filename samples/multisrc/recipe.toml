@@ -2,16 +2,21 @@
 src = "source"
 obj = "target/build"
 out = "target"
+bip = "3.0+"
 
 [build.c]
 include = ["include"]
 define = {MKDIR_BUILD=1}
+hide-symbols = true
 
 [mkdir_win]
 lib = "mkdir"
 platform = "win"
 src = ["mkdir", "mkdir_win"]
 lang = "c"
+
+[mkdir_win.c]
+compiler = "msc"
 
 [mkdir_linux]
 lib = "mkdir"
