@@ -129,7 +129,7 @@ def _msc_obj_args(info: ObjectInfo) -> list[str]:
     if info.release:
         flags.extend(["/O2", "/fp:fast", "/GL", "/DNDEBUG"])
     else:
-        flags.extend(["/Od", "/DEBUG", "/W3", "/DDEBUG", "/D_DEBUG"])
+        flags.extend(["/Od", "/DEBUG", "/W3", "/DDEBUG"])
 
     for [name, val] in info.defines.items():
         if val is not None:
@@ -218,9 +218,9 @@ def _msc_lib_args(info: LinkInfo) -> list[str]:
         flags.append(str(f))
 
     if info.release:
-        flags.extend(["/LD", "/GL"])
+        flags.extend(["/MD", "/LD", "/GL"])
     else:
-        flags.append("/LDd")
+        flags.extend(["/MDd", "/LDd"])
 
     flags.append("/nologo")
 

@@ -84,8 +84,8 @@ LOG_MAX_LINE_LEN = 120
 
 def progress(text: str) -> None:
     line = text
-    if len(line) >= LOG_MAX_LINE_LEN - 2:
-        line = text[:LOG_MAX_LINE_LEN - 5] + "..."
+    # if len(line) >= LOG_MAX_LINE_LEN - 2:
+    #     line = text[:LOG_MAX_LINE_LEN - 5] + "..."
     print(f"{BOLD}{line}{NO_BOLD}")
 
 
