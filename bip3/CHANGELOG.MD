@@ -15,5 +15,12 @@ differs from bip2.
 * Support for defining C/C++ preprocessor macros.
 * Additional compiler command line flags passed for more consistent behavior
   across different compilers (most notably MSC and GNU-like compilers). This
-  includes 64-bit code and SSE4.2 being required for optimized builds.
+  includes 64-bit code and SSE4.2 being required for release builds.
   Whole-program optimization is now enabled for MSC-like compilers.
+* Renamed "optimized" builds to "release" builds
+* Support for symbols being hidden by default on non-Windows platforms.
+* Separate output and object directories for debug and release builds.
+* Removed the ability to change object or output directories of executable and
+  library components.
+* Use correct object file extension based on the platform. (`.obj` on Windows,
+  `.o` otherwise)

@@ -116,21 +116,9 @@ class ExeOrLibComponent(Component):
             if isinstance(raw_src, list):
                 src = [base_paths.src / Path(s) for s in raw_src]
             else:
-                src = [base_path.src / Path(raw_src)]
+                src = [base_paths.src / Path(raw_src)]
         else:
             src = [base_paths.src / name]
-
-        obj: Path
-        if "obj" in raw:
-            obj = base_paths.obj / Path(raw["obj"])
-        else:
-            obj = base_paths.obj / name
-
-        out: Path
-        if "out" in raw:
-            out = base_paths.out / Path(raw["out"])
-        else:
-            out = base_paths.out
 
         real_lang_config = deepcopy(lang_config)
         if "c" in raw:
@@ -148,7 +136,7 @@ class ExeOrLibComponent(Component):
             platform,
             is_lib,
             src,
-            Paths(base_paths.src, obj, out),
+            base_paths,
             libs,
             real_lang_config,
             lang,
@@ -209,18 +197,22 @@ class ExeOrLibComponent(Component):
     def _exe_name(self) -> str:
         match plat.native():
             case plat.ID.WINDOWS:
-                return self.out_name + ".EXE"
+                return self.out_name + ".exe"
             case _:
                 return self.out_name
 
     def _lib_name(self) -> str:
         match plat.native():
             case plat.ID.WINDOWS:
-                return self.out_name + ".DLL"
+                return self.out_name + ".dll"
             case _:
                 return "lib" + self.out_name + ".so"
 
     def _build_c(self, info: RunInfo) -> bool:
+        parent = self._out_file.parent
+        if not parent.exists():
+            parent.mkdir(parents=True)
+
         cmpnt_cfg = self._c_config
         if self._lang == Language.CPP:
             cmpnt_cfg = self._cpp_config
@@ -239,17 +231,17 @@ class ExeOrLibComponent(Component):
                 cli.error("Could not find viable C/C++ compiler")
                 return False
 
-        exe: str
+        link_exe: str
         if self._lang == Language.C:
             if compiler.c_compiler is None:
                 cli.error(f"Chosen compiler ({compiler.name}) does not support C")
                 return False
-            exe = compiler.c_compiler
+            link_exe = compiler.c_compiler
         if self._lang == Language.CPP:
             if compiler.cpp_compiler is None:
                 cli.error(f"Chosen compiler ({compiler.name}) does not support C++")
                 return False
-            exe = compiler.cpp_compiler
+            link_exe = compiler.cpp_compiler
 
         c_std = (
             self._c_config.std if self._c_config.std is not None else C.DEFAULT_C_STD
@@ -263,22 +255,24 @@ class ExeOrLibComponent(Component):
         for obj in self._compile_obj:
             cfg = self._c_config
             std = c_std
+            obj_exe = compiler.c_compiler
             if obj.lang == Language.CPP:
                 cfg = self._cpp_config
                 std = cpp_std
+                obj_exe = compiler.cpp_compiler
 
             info = C.ObjectInfo(
                 cfg,
                 obj.src,
                 obj.obj,
                 cfg.include,
-                info.optimized,
+                info.release,
                 cfg.define,
                 obj.lang == Language.CPP,
                 std,
                 self._is_lib,
             )
-            cli.cmd(exe, C.obj_args(compiler.style, info))
+            cli.cmd(obj_exe, C.obj_args(compiler.style, info))
 
         info = C.LinkInfo(
             cmpnt_cfg,
@@ -286,14 +280,14 @@ class ExeOrLibComponent(Component):
             self._out_file,
             [self._paths.out],
             self._libs,
-            info.optimized,
+            info.release,
             self._lang == Language.CPP,
             None,
         )
         if self._is_lib:
-            cli.cmd(exe, C.lib_args(compiler.style, info))
+            cli.cmd(link_exe, C.lib_args(compiler.style, info))
         else:
-            cli.cmd(exe, C.exe_args(compiler.style, info))
+            cli.cmd(link_exe, C.exe_args(compiler.style, info))
         return True
 
     def run(self, info: RunInfo) -> bool:

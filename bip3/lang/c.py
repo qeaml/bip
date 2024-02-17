@@ -73,7 +73,7 @@ class ObjectInfo:
     # Include directories.
     include: list[Path]
     # Build with optimizations?
-    optimized: bool
+    release: bool
     # Extra preprocessor defines.
     defines: dict[str, Optional[str]]
     # Is this a C++ file?
@@ -86,29 +86,24 @@ class ObjectInfo:
 def _gnu_obj_args(info: ObjectInfo) -> list[str]:
     flags = []
 
-    if info.is_cpp:
-        flags.append("-xc++")
-    else:
-        flags.append("-xc")
-
     flags.extend(["-c", str(info.src), "-o", str(info.out)])
 
     for i in info.include:
         flags.append(f"-I{i}")
 
-    if info.pic and plat.native() != plat.ID.WINDOWS:
-        flags.append("-fPIC")
+    if plat.native() != plat.ID.WINDOWS:
+        if info.pic:
+            flags.append("-fPIC")
+        if info.cfg.hide_symbols:
+            flags.append("-fvisibility=hidden")
 
     flags.append("-m64")
 
-    if info.cfg.hide_symbols:
-        flags.append("-fvisibility=hidden")
-
-    if info.optimized:
-        flags.extend(["-O3", "-flto", "-ffast-math", "-msse4.2", "-DNDEBUG=1"])
+    if info.release:
+        flags.extend(["-O3", "-flto", "-ffast-math", "-msse4.2", "-DNDEBUG"])
     else:
         flags.extend(
-            ["-O0", "-g", "-Wall", "-Wpedantic", "-Wextra", "-DDEBUG=1", "-D_DEBUG"]
+            ["-O0", "-g", "-Wall", "-Wpedantic", "-Wextra", "-DDEBUG"]
         )
 
     for [name, val] in info.defines.items():
@@ -131,10 +126,10 @@ def _msc_obj_args(info: ObjectInfo) -> list[str]:
     for i in info.include:
         flags.append(f"/I{i}")
 
-    if info.optimized:
-        flags.extend(["/O2", "/fp:fast", "/GL", "/DNDEBUG=1"])
+    if info.release:
+        flags.extend(["/O2", "/fp:fast", "/GL", "/DNDEBUG"])
     else:
-        flags.extend(["/Od", "/DEBUG", "/Wall", "/DDEBUG=1", "/D_DEBUG"])
+        flags.extend(["/Od", "/DEBUG", "/Wall", "/DDEBUG", "/D_DEBUG"])
 
     for [name, val] in info.defines.items():
         if val is not None:
@@ -152,7 +147,7 @@ def _msc_obj_args(info: ObjectInfo) -> list[str]:
     # some additional flags to bring msvc to the modern day
     flags.extend(["/nologo", "/diagnostics:caret", "/utf-8"])
 
-    if info.optimized:
+    if info.release:
         flags.extend(["/link", "/LTCG"])
 
     return flags
@@ -180,7 +175,7 @@ class LinkInfo:
     # Libraries to link against.
     libs: list[str]
     # Build with optimizations?
-    optimized: bool
+    release: bool
     # Do we have C++ objects?
     is_cpp: bool
     # Linker override for compilers that support it.
@@ -199,7 +194,7 @@ def _gnu_lib_args(info: LinkInfo) -> list[str]:
     if info.cfg.hide_symbols:
         flags.append("-fvisibility=hidden")
 
-    if info.optimized:
+    if info.release:
         flags.append("-flto")
 
     if info.linker is not None:
@@ -222,7 +217,7 @@ def _msc_lib_args(info: LinkInfo) -> list[str]:
     for f in info.obj:
         flags.append(str(f))
 
-    if info.optimized:
+    if info.release:
         flags.extend(["/LD", "/GL"])
     else:
         flags.append("/LDd")
@@ -234,7 +229,7 @@ def _msc_lib_args(info: LinkInfo) -> list[str]:
 
     flags.append("/link")
 
-    if info.optimized:
+    if info.release:
         flags.append("/LTCG")
 
     for d in info.lib_dirs:
@@ -252,7 +247,7 @@ def _gnu_exe_args(info: LinkInfo) -> list[str]:
     for d in info.lib_dirs:
         flags.append(f"-L{d}")
 
-    if info.optimized:
+    if info.release:
         flags.extend(["-flto"])
 
     if info.linker is not None:
@@ -275,7 +270,7 @@ def _msc_exe_args(info: LinkInfo) -> list[str]:
     for f in info.obj:
         flags.append(str(f))
 
-    if info.optimized:
+    if info.release:
         flags.extend(["/MD", "/GL"])
     else:
         flags.append("/MDd")
@@ -287,7 +282,7 @@ def _msc_exe_args(info: LinkInfo) -> list[str]:
 
     flags.append("/link")
 
-    if info.optimized:
+    if info.release:
         flags.append("/LTCG")
 
     for d in info.lib_dirs:

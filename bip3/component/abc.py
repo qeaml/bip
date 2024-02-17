@@ -12,7 +12,7 @@ import plat
 
 @dataclass
 class RunInfo:
-    optimized: bool
+    release: bool
 
 
 # Paths commonly used across different kinds of components.
@@ -23,7 +23,7 @@ class Paths:
     out: Path
 
     @classmethod
-    def from_dict(cls, raw: dict) -> "Paths":
+    def from_dict(cls, raw: dict, info: RunInfo) -> "Paths":
         src: Path
         if "src" in raw:
             src = Path(raw["src"])
@@ -41,6 +41,13 @@ class Paths:
             obj = Path(raw["obj"])
         else:
             obj = Path(".")
+
+        if info.release:
+            obj /= "release"
+            out /= "release"
+        else:
+            obj /= "debug"
+            out /= "debug"
 
         return cls(src, obj, out)
 

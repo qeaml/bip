@@ -12,17 +12,20 @@ Where <action> can be:
     check -> ensure a recipe file is available and is valid
     build -> build the current recipe
     clean -> remove all build artifacts
+Where [options...] can be:
+    --recipe=<name> -> specify name of recipe file (default `recipe.toml`)
 """.strip()
 
-MAX_RECIPE_SEARCH_DEPTH = 7
+MAX_RECIPE_SEARCH_DEPTH = 5
 
 
-def _find_recipe_file() -> Optional[Path]:
-    path = Path("recipe.toml").resolve()
+def _find_recipe_file(filename: str) -> Optional[Path]:
+    path = Path(filename).resolve()
     for i in range(MAX_RECIPE_SEARCH_DEPTH):
         if path.exists():
+            print(f"recipe file is {path}")
             return path
-        path = path.parent.parent / "recipe.toml"
+        path = path.parent.parent / filename
     return None
 
 
@@ -38,17 +41,22 @@ def main(args: list[str]) -> int:
             print(version_str())
             return 0
 
-    recipe_path = _find_recipe_file()
+    recipe_filename = "recipe.toml"
+    if "recipe" in args.named:
+        recipe_filename = args.named.pop("recipe")
+
+    recipe_path = _find_recipe_file(recipe_filename)
     if recipe_path is None:
         print(USAGE % args.program)
         return 1
 
-    recipe = Recipe.load(recipe_path)
+    is_release = any((x in args.flags for x in ("o", "opt", "r", "rel", "release")))
+    info = RunInfo(is_release)
+
+    recipe = Recipe.load(recipe_path, info)
     if recipe is None:
         cli.error("Could not load recipe file.")
         return 2
-
-    info = RunInfo("opt" in args.flags)
 
     match args.pos[0].lower():
         case "check":

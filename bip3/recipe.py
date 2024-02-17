@@ -18,7 +18,7 @@ class Recipe:
     lang_config: lang.MultiConfig
 
     @classmethod
-    def load(cls, path: Path) -> Optional["Recipe"]:
+    def load(cls, path: Path, info: component.abc.RunInfo) -> Optional["Recipe"]:
         raw: dict[str, Any]
         try:
             with path.open("rb") as f:
@@ -47,7 +47,7 @@ class Recipe:
                     )
                     return None
 
-        base_paths = component.Paths.from_dict(build)
+        base_paths = component.Paths.from_dict(build, info)
 
         c_config = C.Config()
         if "c" in build:
