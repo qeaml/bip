@@ -129,7 +129,7 @@ def _msc_obj_args(info: ObjectInfo) -> list[str]:
     if info.release:
         flags.extend(["/O2", "/fp:fast", "/GL", "/DNDEBUG"])
     else:
-        flags.extend(["/Od", "/DEBUG", "/Wall", "/DDEBUG", "/D_DEBUG"])
+        flags.extend(["/Od", "/DEBUG", "/W3", "/DDEBUG", "/D_DEBUG"])
 
     for [name, val] in info.defines.items():
         if val is not None:
