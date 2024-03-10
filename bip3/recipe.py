@@ -39,7 +39,7 @@ class Recipe:
             if reqr is None:
                 cli.warn(f"Could not parse version requirement: {raw_reqr}")
             else:
-                print(reqr)
+                # print(reqr)
                 if not reqr.is_satisfied():
                     cli.error(
                         f"This recipe is meant for bip {raw_reqr}",

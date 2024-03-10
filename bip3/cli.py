@@ -57,6 +57,7 @@ BOLD = "\x1b[1m"
 NO_BOLD = "\x1b[22m"
 
 RED = "\x1b[31m"
+GREEN = "\x1b[32m"
 YELLOW = "\x1b[33m"
 CYAN = "\x1b[36m"
 DEFAULT = "\x1b[39m"
@@ -80,13 +81,23 @@ def warn(text: str, tip: Optional[str] = None) -> None:
 def error(text: str, tip: Optional[str] = None) -> None:
     message("error", RED, text, tip)
 
+
 LOG_MAX_LINE_LEN = 120
+
 
 def progress(text: str) -> None:
     line = text
-    # if len(line) >= LOG_MAX_LINE_LEN - 2:
-    #     line = text[:LOG_MAX_LINE_LEN - 5] + "..."
+    if len(line) >= LOG_MAX_LINE_LEN - 2:
+        line = text[: LOG_MAX_LINE_LEN - 5] + "..."
     print(f"{BOLD}{line}{NO_BOLD}")
+
+
+def success(text: str) -> None:
+    print(f"{GREEN}{BOLD}{text}{NO_BOLD}{DEFAULT}")
+
+
+def failure(text: str) -> None:
+    print(f"{RED}{BOLD}{text}{NO_BOLD}{DEFAULT}")
 
 
 # Quote an argument if necessary
@@ -103,6 +114,25 @@ def join(args: list[str]) -> str:
 
 # Run a command
 def cmd(exe: str, args: list[str]) -> bool:
-    full = join([exe, *args])
-    progress(f"$ {full}")
-    return subprocess.run(full, shell=True).returncode == 0
+    return subprocess.run(join([exe, *args]), shell=True).returncode == 0
+
+@dataclass
+class CmdOut:
+    success: bool
+    stderr: bytes
+
+
+def cmd_out(exe: str, args: list[str]) -> CmdOut:
+    res = subprocess.run(join([exe, *args]), shell=True, capture_output=True)
+    return CmdOut(res.returncode == 0, res.stderr)
+
+
+def wrapped(indent: int, text: str):
+    max_line = LOG_MAX_LINE_LEN - indent
+    line_prefix = " " * indent
+    for line in text.splitlines():
+        if len(line) > max_line:
+            print(line_prefix+line[:max_line])
+            print(line_prefix+line[max_line:])
+        else:
+            print(line_prefix+line)

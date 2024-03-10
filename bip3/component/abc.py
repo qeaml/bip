@@ -4,10 +4,32 @@ Component abstract base class.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from enum import IntEnum, auto
 from pathlib import Path
 from typing import Optional
 
 import plat
+
+
+class ContribKind(IntEnum):
+    EXE = auto()
+    LIB = auto()
+
+
+# What a component contributes to a build.
+@dataclass
+class Contrib:
+    kind: ContribKind
+    name: str
+    path: Path
+
+    @classmethod
+    def exe(cls, name: str, path: Path):
+        return cls(ContribKind.EXE, name, path)
+
+    @classmethod
+    def lib(cls, name: str, path: Path):
+        return cls(ContribKind.LIB, name, path)
 
 
 @dataclass
@@ -83,3 +105,7 @@ class Component(ABC):
     @abstractmethod
     def clean(self) -> bool:
         return True
+
+    @abstractmethod
+    def contrib(self) -> list[Contrib]:
+        pass

@@ -2,14 +2,15 @@
 C and C++ language support.
 """
 
+import struct
 from dataclasses import dataclass, field
 from enum import IntEnum, auto
 from pathlib import Path
 from shutil import which
 from typing import Any, Optional
-import struct
 
 import plat
+import cli
 
 
 # CLI argument style for compiler invocations. This also decides the object file
@@ -83,6 +84,13 @@ class ObjectInfo:
     pic: bool
 
 
+GNU_DIAGNOSTIC_OPTIONS = [
+    f"-fmessage-length={cli.LOG_MAX_LINE_LEN - 3}",
+    "-fdiagnostics-color=always",
+    "-fno-diagnostics-show-option",
+]
+
+
 def _gnu_obj_args(info: ObjectInfo) -> list[str]:
     flags = []
 
@@ -102,9 +110,7 @@ def _gnu_obj_args(info: ObjectInfo) -> list[str]:
     if info.release:
         flags.extend(["-O3", "-flto", "-ffast-math", "-msse4.2", "-DNDEBUG"])
     else:
-        flags.extend(
-            ["-O0", "-g", "-Wall", "-Wpedantic", "-Wextra", "-DDEBUG"]
-        )
+        flags.extend(["-O0", "-g", "-Wall", "-Wpedantic", "-Wextra", "-DDEBUG"])
 
     for [name, val] in info.defines.items():
         if val is not None:
@@ -116,6 +122,8 @@ def _gnu_obj_args(info: ObjectInfo) -> list[str]:
 
     if info.cfg.noexcept:
         flags.append("-fno-exceptions")
+
+    flags.extend(GNU_DIAGNOSTIC_OPTIONS)
 
     return flags
 
@@ -143,6 +151,9 @@ def _msc_obj_args(info: ObjectInfo) -> list[str]:
         flags.append("/TC")
 
     flags.extend([f"/std:{info.std}", "/permissive-"])
+
+    if not info.cfg.noexcept:
+        flags.append("/EHsc")
 
     # some additional flags to bring msvc to the modern day
     flags.extend(["/nologo", "/diagnostics:caret", "/utf-8"])
@@ -191,11 +202,14 @@ def _gnu_lib_args(info: LinkInfo) -> list[str]:
     for d in info.lib_dirs:
         flags.append(f"-L{d}")
 
-    if info.cfg.hide_symbols:
-        flags.append("-fvisibility=hidden")
+    if plat.native() != plat.ID.WINDOWS:
+        if info.cfg.hide_symbols:
+            flags.append("-fvisibility=hidden")
 
     if info.release:
         flags.append("-flto")
+    else:
+        flags.append("-g")
 
     if info.linker is not None:
         flags.append(f"-fuse-ld={info.linker}")
@@ -207,6 +221,8 @@ def _gnu_lib_args(info: LinkInfo) -> list[str]:
 
     for l in info.libs:
         flags.append(f"-l{l}")
+
+    flags.extend(GNU_DIAGNOSTIC_OPTIONS)
 
     return flags
 
@@ -260,6 +276,8 @@ def _gnu_exe_args(info: LinkInfo) -> list[str]:
 
     for l in info.libs:
         flags.append(f"-l{l}")
+
+    flags.extend(GNU_DIAGNOSTIC_OPTIONS)
 
     return flags
 
@@ -315,7 +333,7 @@ class Compiler:
     name: str
     # C compiler executable. If None, the compiler does not support compiling C.
     c_compiler: Optional[str]
-    # C++ compiler executable. If None, the compiler does not support compilig
+    # C++ compiler executable. If None, the compiler does not support compiling
     # C++.
     cpp_compiler: Optional[str]
     # See FlagStyle.
@@ -346,23 +364,23 @@ def find_compiler(name: str) -> Optional[Compiler]:
 
 # Check if the given compiler is available in our current environment.
 def has_compiler(name: str) -> Optional[Compiler]:
-    print("compiler", name)
+    # print("compiler", name)
     compiler = find_compiler(name)
     if compiler is None:
-        print("  not known")
+        # print("  not known")
         return None
 
     if compiler.c_compiler is not None:
         if which(compiler.c_compiler) is None:
-            print("  C frontend not present")
+            # print("  C frontend not present")
             return None
 
     if compiler.cpp_compiler is not None:
         if which(compiler.cpp_compiler) is None:
-            print("  C++ frontend not present")
+            # print("  C++ frontend not present")
             return None
 
-    print("  is OK")
+    # print("  is OK")
     return compiler
 
 

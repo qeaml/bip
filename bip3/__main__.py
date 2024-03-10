@@ -23,7 +23,7 @@ def _find_recipe_file(filename: str) -> Optional[Path]:
     path = Path(filename).resolve()
     for i in range(MAX_RECIPE_SEARCH_DEPTH):
         if path.exists():
-            print(f"recipe file is {path}")
+            # print(f"recipe file is {path}")
             return path
         path = path.parent.parent / filename
     return None
