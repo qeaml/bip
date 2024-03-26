@@ -116,6 +116,7 @@ def join(args: list[str]) -> str:
 def cmd(exe: str, args: list[str]) -> bool:
     return subprocess.run(join([exe, *args]), shell=True).returncode == 0
 
+
 @dataclass
 class CmdOut:
     success: bool
@@ -132,7 +133,7 @@ def wrapped(indent: int, text: str):
     line_prefix = " " * indent
     for line in text.splitlines():
         if len(line) > max_line:
-            print(line_prefix+line[:max_line])
-            print(line_prefix+line[max_line:])
+            print(line_prefix + line[:max_line])
+            print(line_prefix + line[max_line:])
         else:
-            print(line_prefix+line)
+            print(line_prefix + line)

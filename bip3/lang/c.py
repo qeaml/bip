@@ -9,8 +9,9 @@ from pathlib import Path
 from shutil import which
 from typing import Any, Optional
 
-import plat
 import cli
+import plat
+from version import VERSION_NUM
 
 
 # CLI argument style for compiler invocations. This also decides the object file
@@ -83,6 +84,9 @@ class ObjectInfo:
     std: str
     pic: bool
 
+
+MSC_VERSION_DEF = f"/D_BIP={VERSION_NUM}"
+GNU_VERSION_DEF = f"-D_BIP={VERSION_NUM}"
 
 GNU_DIAGNOSTIC_OPTIONS = [
     f"-fmessage-length={cli.LOG_MAX_LINE_LEN - 3}",

@@ -43,7 +43,7 @@ class Recipe:
                 if not reqr.is_satisfied():
                     cli.error(
                         f"This recipe is meant for bip {raw_reqr}",
-                        f"You are currently using bip {version.version_str()}",
+                        f"You are currently using bip {version.VERSION_STR}",
                     )
                     return None
 

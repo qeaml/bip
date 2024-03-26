@@ -360,7 +360,9 @@ class ExeOrLibComponent(Component):
             success = cli.cmd(link_exe, C.exe_args(compiler.style, info))
 
         if success:
-            cli.success(f" OK. {self._stats.compiled_ok} objects compiled, {self._stats.reused_objects} objects reused")
+            cli.success(
+                f" OK. {self._stats.compiled_ok} objects compiled, {self._stats.reused_objects} objects reused"
+            )
         else:
             cli.failure(f" Fail. Could not link.")
         return success

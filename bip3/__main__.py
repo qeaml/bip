@@ -4,7 +4,7 @@ from typing import Optional
 import cli
 from component.abc import RunInfo
 from recipe import Recipe
-from version import version_str
+from version import VERSION_STR
 
 USAGE = """
 Usage: %s <action> [options...]
@@ -38,7 +38,7 @@ def main(args: list[str]) -> int:
 
     match args.pos[0].lower():
         case "version":
-            print(version_str())
+            print(VERSION_STR)
             return 0
 
     recipe_filename = "recipe.toml"

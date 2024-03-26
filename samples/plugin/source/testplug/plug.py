@@ -1,8 +1,10 @@
 import bip
 
+
 def configure(pathes: bip.Pathes, settings: dict[str, str]) -> bool:
-  return True
+    return True
+
 
 def run() -> bool:
-  bip.note("Hello from testplug!")
-  return True
+    bip.note("Hello from testplug!")
+    return True

@@ -4,10 +4,8 @@ from enum import IntEnum
 from typing import Optional
 
 VERSION = (3, 0, 0, "pre")
-
-
-def version_str() -> str:
-    return f"{VERSION[0]}.{VERSION[1]}.{VERSION[2]}{VERSION[3]}"
+VERSION_NUM = (VERSION[0] << 16) | (VERSION[1] << 8) | VERSION[2]
+VERSION_STR = f"{VERSION[0]}.{VERSION[1]}.{VERSION[2]}{VERSION[3]}"
 
 
 REQR_REGEX = re.compile("^(<|<=|=|==|>=|>)?(\\d+)\\.(\\d+)(?:.(\\d+))?(\\+)?$")

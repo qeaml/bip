@@ -15,6 +15,10 @@ from typing import Any, Optional, Callable
 from shutil import copy, copytree, rmtree
 
 g_version = (2, 1)
+# version number consists of a nibble representing the major version, then a
+# byte representing the minor version and finally a byte representing the patch
+# version. for example, 3.2.1 is encoded as 0x30201
+g_version_number = g_version[0] * 0x10000 + g_version[1] * 0x100
 
 class Platform(IntEnum):
   Unspecified = -1
@@ -339,6 +343,7 @@ class CJob(Job):
       f"-o{obj.out}",
     ])
     flags.extend([f"-I{incl}" for incl in self._incl])
+    flags.append(f"-D_BIP={g_version_number}")
     if g_opt:
       flags.extend(["-DNDEBUG", "-O3"])
     else:
