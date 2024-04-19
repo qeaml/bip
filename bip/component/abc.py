@@ -8,7 +8,7 @@ from enum import IntEnum, auto
 from pathlib import Path
 from typing import Optional
 
-import plat
+import bip.plat as plat
 
 
 class ContribKind(IntEnum):

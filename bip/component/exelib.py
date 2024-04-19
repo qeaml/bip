@@ -9,10 +9,10 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Optional
 
-import cli
-import lang
-import lang.c as C
-import plat
+import bip.cli as cli
+import bip.lang as lang
+import bip.lang.c as C
+import bip.plat as plat
 
 from .abc import *
 

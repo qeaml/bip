@@ -6,9 +6,9 @@ Component definitions.
 from enum import StrEnum
 from typing import Optional
 
-import cli
-import lang
-import plat
+import bip.cli as cli
+import bip.lang as lang
+import bip.plat as plat
 
 from .abc import Component, Paths
 from .exelib import ExeOrLibComponent

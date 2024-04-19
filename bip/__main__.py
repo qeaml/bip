@@ -1,10 +1,10 @@
 from pathlib import Path
 from typing import Optional
 
-import cli
-from component.abc import RunInfo
-from recipe import Recipe
-from version import VERSION_STR
+import bip.cli as cli
+from .component.abc import RunInfo
+from .recipe import Recipe
+from .version import VERSION_STR
 
 USAGE = """
 Usage: %s <action> [options...]
@@ -78,7 +78,11 @@ def main(args: list[str]) -> int:
             return 1
 
 
-if __name__ == "__main__":
+def script_main() -> int:
     from sys import argv
 
-    exit(main(argv))
+    return main(argv)
+
+
+if __name__ == "__main__":
+    exit(script_main)

@@ -1,4 +1,4 @@
-# bip
+# bip3
 
 **b**uild **i**t **p**lease is a more complex version of [qcbs][qcbs].
 

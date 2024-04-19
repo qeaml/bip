@@ -3,12 +3,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-import cli
-import component
-import lang
-import lang.c as C
-import plat
-import version
+import bip.cli as cli
+import bip.component as component
+import bip.lang as lang
+import bip.lang.c as C
+import bip.plat as plat
+import bip.version as version
 
 
 @dataclass

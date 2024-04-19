@@ -4,7 +4,7 @@ Defines the multi-language configuration dataclass.
 
 from dataclasses import dataclass, field
 
-import lang.c as C
+import bip.lang.c as C
 
 
 @dataclass

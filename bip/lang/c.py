@@ -9,9 +9,9 @@ from pathlib import Path
 from shutil import which
 from typing import Any, Optional
 
-import cli
-import plat
-from version import VERSION_NUM
+import bip.cli as cli
+import bip.plat as plat
+from bip.version import VERSION_NUM
 
 
 # CLI argument style for compiler invocations. This also decides the object file
