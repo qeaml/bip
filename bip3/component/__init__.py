@@ -12,6 +12,7 @@ import plat
 
 from .abc import Component, Paths
 from .exelib import ExeOrLibComponent
+from .plug import PlugComponent
 
 
 # Represents the kind of component. This is used to read the rest of a
@@ -63,6 +64,8 @@ def from_dict(
             return ExeOrLibComponent.from_dict(
                 raw, name, out_name, platcond, True, base_paths, lang_config
             )
+        case Kind.PLUG:
+            return PlugComponent.from_dict(raw, name, out_name, platcond, base_paths)
 
     cli.error(f"Component kind '{kind.value}' currently unimplemented.")
     return None

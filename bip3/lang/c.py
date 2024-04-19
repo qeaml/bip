@@ -121,6 +121,7 @@ def _gnu_obj_args(info: ObjectInfo) -> list[str]:
             flags.append(f"-D{name}={val}")
         else:
             flags.append(f"-D{name}")
+    flags.append(f"-D_BIP={VERSION_NUM}")
 
     flags.append(f"--std={info.std}")
 
@@ -148,6 +149,7 @@ def _msc_obj_args(info: ObjectInfo) -> list[str]:
             flags.append(f"/D{name}={val}")
         else:
             flags.append(f"/D{name}")
+    flags.append(f"/D_BIP={VERSION_NUM}")
 
     if info.is_cpp:
         flags.append("/TP")

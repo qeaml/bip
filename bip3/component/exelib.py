@@ -377,6 +377,9 @@ class ExeOrLibComponent(Component):
     def clean(self) -> bool:
         for root in self._src_dirs:
             self._discover_obj(self._paths.src, root)
+        for obj in self._compile_obj + self._reuse_obj:
+            if obj.obj.exists():
+                obj.obj.unlink()
         return False
 
     def contrib(self) -> list[Contrib]:
