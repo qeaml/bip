@@ -271,6 +271,8 @@ def _gnu_exe_args(info: LinkInfo) -> list[str]:
 
     if info.release:
         flags.extend(["-flto"])
+    else:
+        flags.extend(["-g"])
 
     if info.linker is not None:
         flags.append(f"-fuse-ld={info.linker}")
