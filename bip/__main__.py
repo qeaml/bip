@@ -1,7 +1,9 @@
+import os
 from pathlib import Path
 from typing import Optional
 
 import bip.cli as cli
+
 from .component.abc import RunInfo
 from .recipe import Recipe
 from .version import VERSION_STR
@@ -58,6 +60,8 @@ def main(args: list[str]) -> int:
         cli.error("Could not load recipe file.")
         return 2
 
+    os.chdir(recipe_path.parent)
+
     match args.pos[0].lower():
         case "check":
             print(f"Recipe file {recipe_path} is valid.")
@@ -81,7 +85,10 @@ def main(args: list[str]) -> int:
 def script_main() -> int:
     from sys import argv
 
-    return main(argv)
+    old_cwd = os.getcwd()
+    status = main(argv)
+    os.chdir(old_cwd)
+    return status
 
 
 if __name__ == "__main__":
