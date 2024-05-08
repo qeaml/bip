@@ -2,4 +2,4 @@ __pycache__
 samples/*/target
 *.egg-info
 compile_commands.json
-\.?venv
+.*venv
