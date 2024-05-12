@@ -88,12 +88,6 @@ class ObjectInfo:
 MSC_VERSION_DEF = f"/D_BIP={VERSION_NUM}"
 GNU_VERSION_DEF = f"-D_BIP={VERSION_NUM}"
 
-GNU_DIAGNOSTIC_OPTIONS = [
-    f"-fmessage-length={cli.LOG_MAX_LINE_LEN - 3}",
-    "-fdiagnostics-color=always",
-    "-fno-diagnostics-show-option",
-]
-
 
 def _gnu_obj_args(info: ObjectInfo) -> list[str]:
     flags = []
@@ -127,8 +121,6 @@ def _gnu_obj_args(info: ObjectInfo) -> list[str]:
 
     if info.cfg.noexcept:
         flags.append("-fno-exceptions")
-
-    flags.extend(GNU_DIAGNOSTIC_OPTIONS)
 
     return flags
 
@@ -209,6 +201,7 @@ def _gnu_lib_args(info: LinkInfo) -> list[str]:
         flags.append(f"-L{d}")
 
     if plat.native() != plat.ID.WINDOWS:
+        flags.append("-Wl,-rpath,\\$ORIGIN")
         if info.cfg.hide_symbols:
             flags.append("-fvisibility=hidden")
 
@@ -227,8 +220,6 @@ def _gnu_lib_args(info: LinkInfo) -> list[str]:
 
     for l in info.libs:
         flags.append(f"-l{l}")
-
-    flags.extend(GNU_DIAGNOSTIC_OPTIONS)
 
     return flags
 
@@ -269,6 +260,9 @@ def _gnu_exe_args(info: LinkInfo) -> list[str]:
     for d in info.lib_dirs:
         flags.append(f"-L{d}")
 
+    if plat.native() != plat.ID.WINDOWS:
+        flags.append("-Wl,-rpath,\\$ORIGIN")
+
     if info.release:
         flags.extend(["-flto"])
     else:
@@ -284,8 +278,6 @@ def _gnu_exe_args(info: LinkInfo) -> list[str]:
 
     for l in info.libs:
         flags.append(f"-l{l}")
-
-    flags.extend(GNU_DIAGNOSTIC_OPTIONS)
 
     return flags
 

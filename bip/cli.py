@@ -114,7 +114,9 @@ def join(args: list[str]) -> str:
 
 # Run a command
 def cmd(exe: str, args: list[str]) -> bool:
-    return subprocess.run(join([exe, *args]), shell=True).returncode == 0
+    full = join([exe, *args])
+    # print(full)
+    return subprocess.run(full, shell=True).returncode == 0
 
 
 @dataclass
@@ -124,7 +126,9 @@ class CmdOut:
 
 
 def cmd_out(exe: str, args: list[str]) -> CmdOut:
-    res = subprocess.run(join([exe, *args]), shell=True, capture_output=True)
+    full = join([exe, *args])
+    # print(full)
+    res = subprocess.run(full, shell=True, capture_output=True)
     return CmdOut(res.returncode == 0, res.stderr)
 
 

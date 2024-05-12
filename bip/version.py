@@ -3,12 +3,12 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import Optional
 
-VERSION = (3, 0, 0, "pre")
-VERSION_NUM = (VERSION[0] << 16) | (VERSION[1] << 8) | VERSION[2]
-VERSION_STR = f"{VERSION[0]}.{VERSION[1]}.{VERSION[2]}{VERSION[3]}"
+VERSION = (3, 1)
+VERSION_NUM = (VERSION[0] << 16) | VERSION[1]
+VERSION_STR = f"{VERSION[0]}.{VERSION[1]}"
 
 
-REQR_REGEX = re.compile("^(<|<=|=|==|>=|>)?(\\d+)\\.(\\d+)(?:.(\\d+))?(\\+)?$")
+REQR_REGEX = re.compile("^(<|<=|=|==|>=|>)?(\\d+)\\.(\\d+)(\\+)?$")
 
 
 class Comparator(IntEnum):
@@ -24,7 +24,6 @@ class Reqr:
     comparator: Comparator
     major: int
     minor: int
-    patch: Optional[int]
 
     def is_satisfied(self) -> bool:
         match self.comparator:
@@ -33,15 +32,11 @@ class Reqr:
                     return False
                 if VERSION[1] >= self.minor:
                     return False
-                if self.patch is not None and VERSION[2] >= self.patch:
-                    return False
                 return True
             case Comparator.LOWER_EQUAL:
                 if VERSION[0] > self.major:
                     return False
                 if VERSION[1] > self.minor:
-                    return False
-                if self.patch is not None and VERSION[2] > self.patch:
                     return False
                 return True
             case Comparator.EQUAL:
@@ -49,23 +44,17 @@ class Reqr:
                     return False
                 if VERSION[1] != self.minor:
                     return False
-                if self.patch is not None and VERSION[2] != self.patch:
-                    return False
                 return True
             case Comparator.GREATER_EQUAL:
                 if VERSION[0] < self.major:
                     return False
                 if VERSION[1] < self.minor:
                     return False
-                if self.patch is not None and VERSION[2] < self.patch:
-                    return False
                 return True
             case Comparator.GREATER:
                 if VERSION[0] <= self.major:
                     return False
                 if VERSION[1] <= self.minor:
-                    return False
-                if self.patch is not None and VERSION[2] <= self.patch:
                     return False
                 return True
 
@@ -90,7 +79,7 @@ def parse_reqr(raw: str) -> Optional[Reqr]:
             case ">":
                 comparator = Comparator.GREATER
 
-    comp_suffix = res.group(5)
+    comp_suffix = res.group(4)
     if comp_suffix is not None:
         if comparator is not None:
             return None
@@ -101,9 +90,4 @@ def parse_reqr(raw: str) -> Optional[Reqr]:
 
     major = int(res.group(2))
     minor = int(res.group(3))
-    patch = None
-    patch_group = res.group(4)
-    if patch_group is not None:
-        patch = int(patch_group)
-
-    return Reqr(comparator, major, minor, patch)
+    return Reqr(comparator, major, minor)

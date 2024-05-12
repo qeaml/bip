@@ -51,6 +51,17 @@ class Stats:
     compiled_err = 0  # amount of object files that failed to compile
 
 
+@dataclass
+class ExeLibCfg:
+    is_lib: bool
+    src_dirs: list[Path]
+    paths: Paths
+    libs: list[str]
+    lang_config: lang.MultiConfig
+    lang: Language
+    recursive: bool
+
+
 # Component that compiles and links an executable or a shared library.
 class ExeOrLibComponent(Component):
     _is_lib: bool
@@ -60,34 +71,27 @@ class ExeOrLibComponent(Component):
     _lang: Language
     _c_config: C.Config
     _cpp_config: C.Config
+    _recursive: bool
     _stats: Stats
 
     def __init__(
-        self,
-        name: str,
-        out_name: str,
-        platcond: Optional[plat.ID],
-        is_lib: bool,
-        src_dirs: list[Path],
-        paths: Paths,
-        libs: list[str],
-        lang_config: lang.MultiConfig,
-        lang: Language,
+        self, name: str, out_name: str, platcond: Optional[plat.ID], cfg: ExeLibCfg
     ):
         super(ExeOrLibComponent, self).__init__(name, out_name, platcond)
-        self._is_lib = is_lib
-        self._paths = paths
-        self._libs = libs
-        self._lang = lang
-        self._c_config = lang_config.c
-        self._cpp_config = lang_config.cpp
+        self._is_lib = cfg.is_lib
+        self._paths = cfg.paths
+        self._libs = cfg.libs
+        self._lang = cfg.lang
+        self._c_config = cfg.lang_config.c
+        self._cpp_config = cfg.lang_config.cpp
         self._reuse_obj = []
         self._compile_obj = []
-        if is_lib:
+        if self._is_lib:
             self._out_file = self._paths.out / self._lib_name()
         else:
             self._out_file = self._paths.out / self._exe_name()
-        self._src_dirs = src_dirs
+        self._src_dirs = cfg.src_dirs
+        self._recursive = cfg.recursive
         self._old_files = []
         self._new_files = []
         self._stats = Stats()
@@ -96,9 +100,6 @@ class ExeOrLibComponent(Component):
         # this will be changed to CPP later if necessary.
         if lang == Language.CPP:
             self._lang = Language.C
-
-        # print(" ", name, "C config:", self._c_config)
-        # print(" ", name, "C++ config:", self._cpp_config)
 
     @classmethod
     def from_dict(
@@ -149,17 +150,15 @@ class ExeOrLibComponent(Component):
         if "libs" in raw:
             libs = raw.pop("libs")
 
-        return cls(
-            name,
-            out_name,
-            platform,
-            is_lib,
-            src,
-            base_paths,
-            libs,
-            real_lang_config,
-            lang,
+        recursive = True
+        if "recursive" in raw:
+            recursive = raw.pop("recursive")
+
+        cfg = ExeLibCfg(
+            is_lib, src, base_paths, libs, real_lang_config, lang, recursive
         )
+
+        return cls(name, out_name, platform, cfg)
 
     _old_files: set[Path]
     _new_files: set[Path]
@@ -225,7 +224,7 @@ class ExeOrLibComponent(Component):
         self._compile_obj.append(CodeObject(src_lang, src, obj))
         self._stats.compiled_objects += 1
 
-    def _discover_obj(self, root: Path, sub: Path) -> None:
+    def _discover_obj(self, root: Path, sub: Path, recurse: bool) -> None:
         if not sub.exists():
             cli.warn(f"source {sub} does not exist")
             return
@@ -235,11 +234,14 @@ class ExeOrLibComponent(Component):
         if not sub.is_dir():
             return
         for src in sub.iterdir():
-            self._discover_obj(root, src)
+            if recurse:
+                self._discover_obj(root, src, True)
+            elif src.is_file():
+                self._add_obj(root, src)
 
     def want_run(self) -> bool:
         for root in self._src_dirs:
-            self._discover_obj(self._paths.src, root)
+            self._discover_obj(self._paths.src, root, self._recursive)
         return len(self._compile_obj) > 0 or not self._out_file.exists()
 
     def _exe_name(self) -> str:
@@ -376,7 +378,7 @@ class ExeOrLibComponent(Component):
 
     def clean(self) -> bool:
         for root in self._src_dirs:
-            self._discover_obj(self._paths.src, root)
+            self._discover_obj(self._paths.src, root, self._recursive)
         for obj in self._compile_obj + self._reuse_obj:
             if obj.obj.exists():
                 obj.obj.unlink()
