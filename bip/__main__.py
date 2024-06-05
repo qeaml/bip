@@ -49,6 +49,7 @@ def main(args: list[str]) -> int:
 
     recipe_path = _find_recipe_file(recipe_filename)
     if recipe_path is None:
+        print("Could not find a recipe.")
         print(USAGE % args.program)
         return 1
 
