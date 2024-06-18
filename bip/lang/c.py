@@ -181,8 +181,10 @@ class LinkInfo:
     out: Path
     # Library search directories.
     lib_dirs: list[Path]
-    # Libraries to link against.
-    libs: list[str]
+    # Dynamic libraries to link against.
+    dyn_libs: list[str]
+    # Static libraries to link against.
+    static_libs: list[str]
     # Build with optimizations?
     release: bool
     # Do we have C++ objects?
@@ -218,8 +220,10 @@ def _gnu_lib_args(info: LinkInfo) -> list[str]:
     if info.cfg.noexcept:
         flags.append("-fno-exceptions")
 
-    for l in info.libs:
+    for l in info.dyn_libs:
         flags.append(f"-l{l}")
+    for l in info.static_libs:
+        flags.append(f"-l:lib{l}.a")
 
     return flags
 
@@ -237,7 +241,9 @@ def _msc_lib_args(info: LinkInfo) -> list[str]:
 
     flags.append("/nologo")
 
-    for l in info.libs:
+    for l in info.dyn_libs:
+        flags.append(f"{l}.lib")
+    for l in info.static_libs:
         flags.append(f"{l}.lib")
 
     flags.append("/link")
@@ -276,8 +282,10 @@ def _gnu_exe_args(info: LinkInfo) -> list[str]:
     if info.cfg.noexcept:
         flags.append("-fno-exceptions")
 
-    for l in info.libs:
+    for l in info.dyn_libs:
         flags.append(f"-l{l}")
+    for l in info.static_libs:
+        flags.append(f"-l:lib{l}.a")
 
     return flags
 
@@ -295,7 +303,9 @@ def _msc_exe_args(info: LinkInfo) -> list[str]:
 
     flags.append("/nologo")
 
-    for l in info.libs:
+    for l in info.dyn_libs:
+        flags.append(f"{l}.lib")
+    for l in info.static_libs:
         flags.append(f"{l}.lib")
 
     flags.append("/link")

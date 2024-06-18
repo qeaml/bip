@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import Optional
 
-VERSION = (3, 1)
+VERSION = (3, 2)
 VERSION_NUM = (VERSION[0] << 16) | VERSION[1]
 VERSION_STR = f"{VERSION[0]}.{VERSION[1]}"
 

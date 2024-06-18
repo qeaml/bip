@@ -1,5 +1,9 @@
 # bip3 changelog
 
+## 3.2
+
+* Components now use `dyn-libs` instead of simply `libs`.
+
 ## 3.0
 
 This is the first fully functional version of bip3. Below is a list of how it

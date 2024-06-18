@@ -56,7 +56,8 @@ class ExeLibCfg:
     is_lib: bool
     src_dirs: list[Path]
     paths: Paths
-    libs: list[str]
+    dyn_libs: list[str]
+    static_libs: list[str]
     lang_config: lang.MultiConfig
     lang: Language
     recursive: bool
@@ -67,7 +68,8 @@ class ExeOrLibComponent(Component):
     _is_lib: bool
     _src_dirs: list[Path]
     _paths: Paths
-    _libs: list[str]
+    _dyn_libs: list[str]
+    _static_libs: list[str]
     _lang: Language
     _c_config: C.Config
     _cpp_config: C.Config
@@ -80,7 +82,8 @@ class ExeOrLibComponent(Component):
         super(ExeOrLibComponent, self).__init__(name, out_name, platcond)
         self._is_lib = cfg.is_lib
         self._paths = cfg.paths
-        self._libs = cfg.libs
+        self._dyn_libs = cfg.dyn_libs
+        self._static_libs = cfg.static_libs
         self._lang = cfg.lang
         self._c_config = cfg.lang_config.c
         self._cpp_config = cfg.lang_config.cpp
@@ -146,16 +149,31 @@ class ExeOrLibComponent(Component):
         if "cpp" in raw:
             real_lang_config.cpp.load_overrides(raw.pop("cpp"))
 
-        libs = []
+        dyn_libs = []
         if "libs" in raw:
-            libs = raw.pop("libs")
+            cli.warn(f"`libs` key is deprecated.",
+                "Use `dyn-libs` or `static-libs` instead.")
+            dyn_libs.extend(raw.pop("libs"))
+        if "dyn-libs" in raw:
+            dyn_libs.extend(raw.pop("dyn-libs"))
+
+        static_libs = []
+        # if "static-libs" in raw:
+        #     static_libs.extend(raw.pop("static-libs"))
 
         recursive = True
         if "recursive" in raw:
             recursive = raw.pop("recursive")
 
         cfg = ExeLibCfg(
-            is_lib, src, base_paths, libs, real_lang_config, lang, recursive
+            is_lib,
+            src,
+            base_paths,
+            dyn_libs,
+            static_libs,
+            real_lang_config,
+            lang,
+            recursive,
         )
 
         return cls(name, out_name, platform, cfg)
@@ -350,7 +368,8 @@ class ExeOrLibComponent(Component):
             [obj.obj for obj in self._compile_obj + self._reuse_obj],
             self._out_file,
             [self._paths.out],
-            self._libs,
+            self._dyn_libs,
+            self._static_libs,
             info.release,
             self._lang == Language.CPP,
             None,
