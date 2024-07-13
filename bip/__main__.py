@@ -1,4 +1,5 @@
 import os
+from colorama import just_fix_windows_console as fix_windows_console
 from pathlib import Path
 from typing import Optional
 
@@ -32,6 +33,8 @@ def _find_recipe_file(filename: str) -> Optional[Path]:
 
 
 def main(args: list[str]) -> int:
+    fix_windows_console()
+
     args = cli.parse(args)
 
     if len(args.pos) < 1:

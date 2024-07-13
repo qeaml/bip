@@ -122,6 +122,7 @@ def cmd(exe: str, args: list[str]) -> bool:
 @dataclass
 class CmdOut:
     success: bool
+    stdout: bytes
     stderr: bytes
 
 
@@ -129,7 +130,7 @@ def cmd_out(exe: str, args: list[str]) -> CmdOut:
     full = join([exe, *args])
     # print(full)
     res = subprocess.run(full, shell=True, capture_output=True)
-    return CmdOut(res.returncode == 0, res.stderr)
+    return CmdOut(res.returncode == 0, res.stdout, res.stderr)
 
 
 def wrapped(indent: int, text: str):

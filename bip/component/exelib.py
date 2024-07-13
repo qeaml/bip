@@ -354,6 +354,8 @@ class ExeOrLibComponent(Component):
             else:
                 self._stats.compiled_ok += 1
 
+            if len(out.stdout) > 0:
+                cli.wrapped(3, out.stdout.decode("utf-8").strip())
             if len(out.stderr) > 0:
                 cli.wrapped(3, out.stderr.decode("utf-8").strip())
 
