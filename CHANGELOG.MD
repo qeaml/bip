@@ -3,6 +3,7 @@
 ## 3.2
 
 * Components now use `dyn-libs` instead of simply `libs`.
+* Added `c-info` command-line action.
 
 ## 3.0
 
