@@ -23,6 +23,12 @@ class FlagStyle(IntEnum):
     MSC = auto()
 
 
+FLAG_STYLE_NAMES = {
+    FlagStyle.GNU: "GCC-like",
+    FlagStyle.MSC: "MSVC-like"
+}
+
+
 DEFAULT_C_STD = "c17"
 DEFAULT_CPP_STD = "c++20"
 
@@ -349,6 +355,14 @@ class Compiler:
     # See FlagStyle.
     style: FlagStyle
 
+    def check_version(self) -> Optional[str]:
+        if self.style == FlagStyle.GNU:
+            out = cli.cmd_out(self.c_compiler, ["--version"])
+            if out is None:
+                return None
+            return out.stdout.decode("utf-8").splitlines()[0]
+        return None
+
 
 # Some commonly used compilers.
 KNOWN_COMPILERS = {
@@ -409,3 +423,31 @@ def default_compiler() -> Optional[Compiler]:
             return has_compiler("gnu")
 
     return None
+
+def _show_compiler(compiler: Compiler, text = "") -> None:
+    print(f"{text}{compiler.name}:")
+    print(f"  Version: {compiler.check_version()}")
+    if compiler.c_compiler is None:
+        print("  C frontend is not supported.")
+    else:
+        print(f"  C frontend executable: {compiler.c_compiler}")
+    if compiler.cpp_compiler is None:
+        print("  C++ frontend is not supported.")
+    else:
+        print(f"  C++ frontend executable: {compiler.cpp_compiler}")
+    print(f"  Flags style: {FLAG_STYLE_NAMES[compiler.style]}")
+
+def show_compiler_info() -> bool:
+    compiler = default_compiler()
+    if compiler is None:
+        cli.error("Could not find a C/C++ compiler.",
+            "Please install a C/C++ compiler and try again.")
+        return False
+    _show_compiler(compiler, "Default compiler: ")
+    return True
+
+def show_all_compilers() -> None:
+    for compiler_id in KNOWN_COMPILERS.keys():
+        compiler = has_compiler(compiler_id)
+        if compiler is not None:
+            _show_compiler(compiler)

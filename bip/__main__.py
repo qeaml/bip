@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 import bip.cli as cli
+import bip.lang.c as C
 
 from .component.abc import RunInfo
 from .recipe import Recipe
@@ -31,7 +32,6 @@ def _find_recipe_file(filename: str) -> Optional[Path]:
         path = path.parent.parent / filename
     return None
 
-
 def main(args: list[str]) -> int:
     fix_windows_console()
 
@@ -45,6 +45,13 @@ def main(args: list[str]) -> int:
         case "version":
             print(VERSION_STR)
             return 0
+        case "c-info":
+            res = True
+            if "all" in args.flags:
+                C.show_all_compilers()
+            else:
+                res = C.show_compiler_info()
+            return 0 if res else 1
 
     recipe_filename = "recipe.toml"
     if "recipe" in args.named:
